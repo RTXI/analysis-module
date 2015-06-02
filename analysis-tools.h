@@ -21,6 +21,8 @@
 #include <QFileInfo>
 
 #include <default_gui_model.h>
+#include <hdf5.h>
+#include <hdf5_hl.h>
 #include <scatterplot.h>
 
 class AnalysisTools : public DefaultGUIModel {

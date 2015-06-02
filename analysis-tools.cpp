@@ -105,17 +105,30 @@ void AnalysisTools::customizeGUI(void) {
 	plotBoxLayout->addWidget(saveFFTPlotButton);
 	customlayout->addWidget(plotBox, 0, 2, 1, 4);
 	plotBox->setMinimumSize(910, 0);
+	
 	// Initialize plots
 	// TO-DO: put QGroupBox around each plot to make it look neater, will eliminate resizing issues too
+	QGroupBox *tsplotBox = new QGroupBox("Time Series Plot");
+	QHBoxLayout *tsplotBoxLayout = new QHBoxLayout;
+	tsplotBox->setLayout(tsplotBoxLayout);
 	tsplot = new BasicPlot(this);
 	tsplot->setFixedSize(450, 270);
-	customlayout->addWidget(tsplot, 1, 2, 3, 2);
+	tsplotBoxLayout->addWidget(tsplot);
+	customlayout->addWidget(tsplotBox, 1, 2, 3, 2);
+	QGroupBox *scatterplotBox = new QGroupBox("Scatter Plot");
+	QHBoxLayout *scatterplotBoxLayout = new QHBoxLayout;
+	scatterplotBox->setLayout(scatterplotBoxLayout);
 	splot = new ScatterPlot(this);
 	splot->setFixedSize(450, 270);
-	customlayout->addWidget(splot, 1, 4, 3, 2);
+	scatterplotBoxLayout->addWidget(splot);
+	customlayout->addWidget(scatterplotBox, 1, 4, 3, 2);
+	QGroupBox *fftplotBox = new QGroupBox("FFT Plot");
+	QHBoxLayout *fftplotBoxLayout = new QHBoxLayout;
+	fftplotBox->setLayout(fftplotBoxLayout);
 	fftplot = new BasicPlot(this);
 	fftplot->setFixedSize(450, 270);
-	customlayout->addWidget(fftplot, 4, 4, 3, 2);
+	fftplotBoxLayout->addWidget(fftplot);
+	customlayout->addWidget(fftplotBox, 4, 4, 3, 2);
 	// Connect screenshot buttons to functions
 	QObject::connect(saveTSPlotButton, SIGNAL(clicked()), this, SLOT(screenshotTS()));
 	QObject::connect(saveScatterPlotButton, SIGNAL(clicked()), this, SLOT(screenshotScatter()));
@@ -143,13 +156,13 @@ void AnalysisTools::customizeGUI(void) {
 	optionButtons->addButton(plotFFTCheckBox);
 	plotFFTCheckBox->setChecked(true);
 	plotFFTCheckBox->setEnabled(true);
-	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setShown(bool)));
+	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),saveTSPlotButton,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
-	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),splot,SLOT(setShown(bool)));
+	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),splot,SLOT(setEnabled(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),saveScatterPlotButton,SLOT(setEnabled(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleScatterplot(bool)));
-	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),fftplot,SLOT(setShown(bool)));
+	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),fftplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),saveFFTPlotButton,SLOT(setEnabled(bool)));
 	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFFTplot(bool)));
 	plotTSCheckBox->setToolTip("Enable time series plot");
@@ -169,6 +182,24 @@ void AnalysisTools::customizeGUI(void) {
 	fileLayout->addWidget(fileChangeButton);
 	QObject::connect(fileChangeButton,SIGNAL(released(void)),this,SLOT(changeDataFile(void)));
 	customlayout->addWidget(fileBox, 2, 0, 1, 1);
+
+	// HDF5 viewer
+	QGroupBox *viewBox = new QGroupBox(tr("HDF5 Viewer"));
+	QHBoxLayout *viewLayout = new QHBoxLayout;
+	viewBox->setLayout(viewLayout);
+	customlayout->addWidget(viewBox, 3, 0, 4, 1);
+	
+	// Attributes
+	QGroupBox *attributesBox = new QGroupBox(tr("Attributes"));
+	QHBoxLayout *attributesLayout = new QHBoxLayout;
+	attributesBox->setLayout(attributesLayout);
+	customlayout->addWidget(attributesBox, 4, 2, 3, 1);
+	
+	// Parameters
+	QGroupBox *paramsBox = new QGroupBox(tr("Parameters"));
+	QHBoxLayout *paramsLayout = new QHBoxLayout;
+	paramsBox->setLayout(paramsLayout);
+	customlayout->addWidget(paramsBox, 4, 3, 3, 1);
 
 	// Standard module buttons
 	QObject::connect(DefaultGUIModel::pauseButton,SIGNAL(toggled(bool)),DefaultGUIModel::modifyButton,SLOT(setEnabled(bool)));
@@ -216,8 +247,7 @@ void AnalysisTools::toggleScatterplot(bool on) {
 void AnalysisTools::toggleFFTplot(bool on) {
 }
 
-void AnalysisTools::changeDataFile(void)
-{
+void AnalysisTools::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
 	fileDialog.setWindowTitle("Select Data File");
@@ -254,8 +284,7 @@ void AnalysisTools::changeDataFile(void)
 	//RT::System::getInstance()->postEvent(&RTevent);
 }
 
-int AnalysisTools::openFile(QString &filename)
-{
+int AnalysisTools::openFile(QString &filename) {
 //#ifdef DEBUG
 	//if(!pthread_equal(pthread_self(),thread))
 	//{
