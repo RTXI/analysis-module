@@ -40,7 +40,7 @@ extern "C" Plugin::Object *createRTXIPlugin(void) {
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
 	{ "Output", "Output", DefaultGUIModel::OUTPUT, },
-	{ "Time (s)", "Time (s)", DefaultGUIModel::STATE, }, 
+	//{ "Time (s)", "Time (s)", DefaultGUIModel::STATE, }, 
 };
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
@@ -107,7 +107,6 @@ void AnalysisTools::customizeGUI(void) {
 	plotBox->setMinimumSize(910, 0);
 	
 	// Initialize plots
-	// TO-DO: put QGroupBox around each plot to make it look neater, will eliminate resizing issues too
 	QGroupBox *tsplotBox = new QGroupBox("Time Series Plot");
 	QHBoxLayout *tsplotBoxLayout = new QHBoxLayout;
 	tsplotBox->setLayout(tsplotBoxLayout);
@@ -135,27 +134,26 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
 	// Plot options
-	// TO-DO: disable scatter and FFT plot / gray scatter and FFT screenshot buttons by default
 	QGroupBox *optionBox = new QGroupBox("Plot Selection");
-	QHBoxLayout *optionBoxLayout = new QHBoxLayout;
+	QGridLayout *optionBoxLayout = new QGridLayout;
 	optionBox->setLayout(optionBoxLayout);
+	QHBoxLayout *plotSelectionLayout = new QHBoxLayout;
 	QButtonGroup *optionButtons = new QButtonGroup;
 	optionButtons->setExclusive(false);
 	QCheckBox *plotTSCheckBox = new QCheckBox("Time Series");
-	optionBoxLayout->addWidget(plotTSCheckBox);
+	plotSelectionLayout->addWidget(plotTSCheckBox);
 	optionButtons->addButton(plotTSCheckBox);
 	plotTSCheckBox->setChecked(true);
-	plotTSCheckBox->setEnabled(true);
 	QCheckBox *plotScatterCheckBox = new QCheckBox("Scatter");
-	optionBoxLayout->addWidget(plotScatterCheckBox);
+	plotSelectionLayout->addWidget(plotScatterCheckBox);
 	optionButtons->addButton(plotScatterCheckBox);
 	plotScatterCheckBox->setChecked(true);
-	plotScatterCheckBox->setEnabled(true);
 	QCheckBox *plotFFTCheckBox = new QCheckBox("FFT");
-	optionBoxLayout->addWidget(plotFFTCheckBox);
+	plotSelectionLayout->addWidget(plotFFTCheckBox);
 	optionButtons->addButton(plotFFTCheckBox);
 	plotFFTCheckBox->setChecked(true);
-	plotFFTCheckBox->setEnabled(true);
+	// TO-DO: disable channelSelection, trialSelection and any scatter/FFT specific options 
+	//        when these are toggled (but leave them disabled if no file has been loaded)
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),saveTSPlotButton,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
@@ -168,7 +166,20 @@ void AnalysisTools::customizeGUI(void) {
 	plotTSCheckBox->setToolTip("Enable time series plot");
 	plotScatterCheckBox->setToolTip("Enable scatter plot");
 	plotFFTCheckBox->setToolTip("Enable FFT plot");
-	customlayout->addWidget(optionBox, 0, 0, 1, 1);
+	optionBoxLayout->addLayout(plotSelectionLayout, 0, 0);
+	QVBoxLayout *plotOptionsLayout = new QVBoxLayout;
+	QComboBox *channelSelection = new QComboBox;
+	plotOptionsLayout->addWidget(channelSelection);
+	channelSelection->setEnabled(false);
+	QObject::connect(channelSelection,SIGNAL(activated(int)), this, SLOT(updateChannelSelection(int)));
+	channelSelection->setToolTip("Select a channel for display");
+	QComboBox *trialSelection = new QComboBox;
+	plotOptionsLayout->addWidget(trialSelection);
+	trialSelection->setEnabled(false);
+	QObject::connect(trialSelection,SIGNAL(activated(int)), this, SLOT(updateTrialSelection(int)));
+	trialSelection->setToolTip("Select a trial for display");
+	optionBoxLayout->addLayout(plotOptionsLayout, 1, 0);
+	customlayout->addWidget(optionBox, 0, 0, 2, 1);
 	
 	// File control
 	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
@@ -247,6 +258,16 @@ void AnalysisTools::toggleScatterplot(bool on) {
 void AnalysisTools::toggleFFTplot(bool on) {
 }
 
+// TO-DO: if I want to automatically update plots when a new channel/trial is selected, call updatePlot in these two functions
+//        otherwise, add a "Plot" button to plot options that will call updatePlot
+void AnalysisTools::updateChannelSelection(int index) {
+	channelSelected = index;
+}
+
+void AnalysisTools::updateTrialSelection(int index) {
+	trialSelected = index;
+}
+
 void AnalysisTools::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
@@ -284,6 +305,10 @@ void AnalysisTools::changeDataFile(void) {
 	//RT::System::getInstance()->postEvent(&RTevent);
 }
 
+// TO-DO: populate HDF5, attribute, and parameter viewer contents
+//        update and enable channelSelection (channelSelection->insertItem(1, "Ch0");)
+//        update and enable trialSelection (trialSelection->insertItem(1, "trial0");)
+//        enable any scatter/FFT specific options
 int AnalysisTools::openFile(QString &filename) {
 //#ifdef DEBUG
 	//if(!pthread_equal(pthread_self(),thread))
@@ -351,6 +376,9 @@ int AnalysisTools::openFile(QString &filename) {
 	return 0;
 }
 
+// TO-DO: erase HDF5, attribute, and parameter viewer contents
+//        erase contents of channelSelection and trialSelection
+//        disable channelSelection, trialSelection and any scatter/FFT specific options
 void AnalysisTools::closeFile(bool shutdown)
 {
 //#ifdef DEBUG
@@ -372,7 +400,3 @@ void AnalysisTools::closeFile(bool shutdown)
 		//data.done.wait(&mutex);
 	//}
 }
-
-//bool AnalysisTools::OpenFile(QString FName) {
-	//return true;
-//}

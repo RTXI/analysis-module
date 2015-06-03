@@ -48,6 +48,10 @@ class AnalysisTools : public DefaultGUIModel {
 		double systime;
 		double dt;
 		
+		// global variables
+		int channelSelected;
+		int trialSelected;
+		
 		// QT components
 		BasicPlot *tsplot;
 		ScatterPlot *splot;
@@ -63,6 +67,8 @@ class AnalysisTools : public DefaultGUIModel {
 		void toggleTSplot(bool);
 		void toggleScatterplot(bool);
 		void toggleFFTplot(bool);
+		void updateChannelSelection(int);
+		void updateTrialSelection(int);
 		void screenshotTS(void);
 		void screenshotScatter(void);
 		void screenshotFFT(void);
