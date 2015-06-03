@@ -133,8 +133,8 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveScatterPlotButton, SIGNAL(clicked()), this, SLOT(screenshotScatter()));
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
-	// Plot options
-	QGroupBox *optionBox = new QGroupBox("Plot Selection");
+	// Global plot options
+	QGroupBox *optionBox = new QGroupBox;
 	QGridLayout *optionBoxLayout = new QGridLayout;
 	optionBox->setLayout(optionBoxLayout);
 	QHBoxLayout *plotSelectionLayout = new QHBoxLayout;
@@ -179,20 +179,25 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(trialSelection,SIGNAL(activated(int)), this, SLOT(updateTrialSelection(int)));
 	trialSelection->setToolTip("Select a trial for display");
 	optionBoxLayout->addLayout(plotOptionsLayout, 1, 0);
-	customlayout->addWidget(optionBox, 0, 0, 2, 1);
+	customlayout->addWidget(optionBox, 1, 0, 1, 1);
+	
+	// Scatter/FFT plot options
+	QGroupBox *plotOptionsBox = new QGroupBox(tr("Scatter/FFT Plot Options"));
+	// TO-DO: add detail here (later)
+	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
 	
 	// File control
 	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
 	QHBoxLayout *fileLayout = new QHBoxLayout;
 	fileBox->setLayout(fileLayout);
 	fileLayout->addWidget(new QLabel(tr("File Name")));
-	QLineEdit *fileNameEdit = new QLineEdit;
+	fileNameEdit = new QLineEdit;
 	fileNameEdit->setReadOnly(true);
 	fileLayout->addWidget(fileNameEdit);
 	QPushButton *fileChangeButton = new QPushButton("Choose File");
 	fileLayout->addWidget(fileChangeButton);
 	QObject::connect(fileChangeButton,SIGNAL(released(void)),this,SLOT(changeDataFile(void)));
-	customlayout->addWidget(fileBox, 2, 0, 1, 1);
+	customlayout->addWidget(fileBox, 0, 0, 1, 1);
 
 	// HDF5 viewer
 	QGroupBox *viewBox = new QGroupBox(tr("HDF5 Viewer"));
@@ -279,22 +284,29 @@ void AnalysisTools::changeDataFile(void) {
 
 	QStringList filterList;
 	filterList.push_back("HDF5 files (*.h5)");
-	filterList.push_back("All files (*.*)");
+	//filterList.push_back("All files (*.*)");
 	fileDialog.setFilters(filterList);
 	fileDialog.selectNameFilter("HDF5 files (*.h5)");
 
+	//QStringList files;
+	//if(fileDialog.exec())
+		//files = fileDialog.selectedFiles();
+
 	QStringList files;
-	if(fileDialog.exec())
-		files = fileDialog.selectedFiles();
-
 	QString filename;
-	if(files.isEmpty() || files[0] == NULL || files[0] == "/" )
-		return;
-	else
+	if(fileDialog.exec()) {
+		files = fileDialog.selectedFiles();
 		filename = files[0];
-
-	if (!filename.toLower().endsWith(QString(".h5")))
-		filename += ".h5";
+		fileNameEdit->setText(filename);
+	}
+	else {
+		return;
+	}
+	
+	openFile(filename);
+	
+	//hid_t file_id;
+	//file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
 	// Write this directory to the user prefs as most recently used
 	//userprefs.setValue("/dirs/data", fileDialog.directory().path());
@@ -310,48 +322,23 @@ void AnalysisTools::changeDataFile(void) {
 //        update and enable trialSelection (trialSelection->insertItem(1, "trial0");)
 //        enable any scatter/FFT specific options
 int AnalysisTools::openFile(QString &filename) {
-//#ifdef DEBUG
-	//if(!pthread_equal(pthread_self(),thread))
-	//{
-		//ERROR_MSG("DataRecorder::Panel::openFile : called by invalid thread\n");
-		//PRINT_BACKTRACE();
-	//}
-//#endif
-
-	//if (QFile::exists(filename)) {
-		//CustomEvent *event = new CustomEvent(static_cast<QEvent::Type>QFileExistsEvent);
-		//FileExistsEventData data;
-
-		//event->setData(static_cast<void *>(&data));
-		//data.filename = filename;
-
-		//QApplication::postEvent(this, event);
-		//data.done.wait(&mutex);
-		//if (data.response == 0) { // append
-			//file.id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDWR, H5P_DEFAULT);
-			//size_t trial_num;
-			//QString trial_name;
-			//H5Eset_auto(H5E_DEFAULT, NULL, NULL);
-			//for (trial_num = 1;; ++trial_num) {
-				//trial_name = "/Trial" + QString::number(trial_num);
-				//file.trial = H5Gopen(file.id, trial_name.toLatin1().constData(), H5P_DEFAULT);
-				//if (file.trial < 0) {
-					//H5Eclear(H5E_DEFAULT);
-					//break;
-				//} else
-					//H5Gclose(file.trial);
-			//}
-			//trialNum->setNum(int(trial_num)-1);
-		//} else if (data.response == 1) { //overwrite
-			//file.id = H5Fcreate(filename.toLatin1().constData(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-			//trialNum->setText("0");
-		//} else {
-			//return -1;
+	if (QFile::exists(filename)) {
+		hid_t file_id;
+		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
+		
+		//size_t trial_num;
+		//QString trial_name;
+		//for (trial_num = 1;; ++trial_num) {
+			//trial_name = "/Trial" + QString::number(trial_num);
+			//file.trial = H5Gopen(file.id, trial_name.toLatin1().constData(), H5P_DEFAULT);
+			//if (file.trial < 0) {
+				//H5Eclear(H5E_DEFAULT);
+				//break;
+			//} else
+				//H5Gclose(file.trial);
 		//}
-	//} else {
-		//file.id = H5Fcreate(filename.toLatin1().constData(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-		//trialNum->setText("0");
-	//}
+		//trialNum->setNum(int(trial_num)-1);
+	}
 	//if (file.id < 0) {
 		//H5E_type_t error_type;
 		//size_t error_size;

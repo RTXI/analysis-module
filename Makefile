@@ -26,7 +26,7 @@ SOURCES = analysis-tools.cpp\
 		  $(RTXI_INCLUDES)/moc_scrollbar.cpp\
 		  
 			 
-LIBS = -lqwt -lgsl
+LIBS = -lqwt -lgsl -lhdf5
 
 ### Do not edit below this line ###
 

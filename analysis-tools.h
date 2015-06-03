@@ -56,6 +56,7 @@ class AnalysisTools : public DefaultGUIModel {
 		BasicPlot *tsplot;
 		ScatterPlot *splot;
 		BasicPlot *fftplot;
+		QLineEdit *fileNameEdit;
 
 		// custom functions
 		void initParameters(void);
