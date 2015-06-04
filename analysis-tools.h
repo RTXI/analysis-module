@@ -24,6 +24,7 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include <scatterplot.h>
+#include <stdio.h>
 
 class AnalysisTools : public DefaultGUIModel {
 
@@ -76,3 +77,5 @@ class AnalysisTools : public DefaultGUIModel {
 		void clearData(void);
 		void changeDataFile(void);
 };
+
+herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);

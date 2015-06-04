@@ -284,13 +284,8 @@ void AnalysisTools::changeDataFile(void) {
 
 	QStringList filterList;
 	filterList.push_back("HDF5 files (*.h5)");
-	//filterList.push_back("All files (*.*)");
 	fileDialog.setFilters(filterList);
 	fileDialog.selectNameFilter("HDF5 files (*.h5)");
-
-	//QStringList files;
-	//if(fileDialog.exec())
-		//files = fileDialog.selectedFiles();
 
 	QStringList files;
 	QString filename;
@@ -298,23 +293,8 @@ void AnalysisTools::changeDataFile(void) {
 		files = fileDialog.selectedFiles();
 		filename = files[0];
 		fileNameEdit->setText(filename);
+		openFile(filename);
 	}
-	else {
-		return;
-	}
-	
-	openFile(filename);
-	
-	//hid_t file_id;
-	//file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
-
-	// Write this directory to the user prefs as most recently used
-	//userprefs.setValue("/dirs/data", fileDialog.directory().path());
-
-	// Post to event queue
-	// TO-DO: is this necessary? Taken from data recorder
-	//OpenFileEvent RTevent(filename, fifo);
-	//RT::System::getInstance()->postEvent(&RTevent);
 }
 
 // TO-DO: populate HDF5, attribute, and parameter viewer contents
@@ -324,7 +304,12 @@ void AnalysisTools::changeDataFile(void) {
 int AnalysisTools::openFile(QString &filename) {
 	if (QFile::exists(filename)) {
 		hid_t file_id;
+		herr_t status;
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
+		
+		// Iterate through file
+		printf ("Objects in the file:\n");
+		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
 		
 		//size_t trial_num;
 		//QString trial_name;
@@ -361,6 +346,29 @@ int AnalysisTools::openFile(QString &filename) {
 	//data.done.wait(&mutex);
 
 	return 0;
+}
+
+herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
+    printf ("/"); // Print root group in object path
+    if (name[0] == '.') { // Root group, do not print '.'
+        printf ("  (Group)\n");
+    } else {
+        switch (info->type) {
+            case H5O_TYPE_GROUP:
+                printf ("%s  (Group)\n", name);
+                break;
+            case H5O_TYPE_DATASET:
+                printf ("%s  (Dataset)\n", name);
+                break;
+            case H5O_TYPE_NAMED_DATATYPE:
+                printf ("%s  (Datatype)\n", name);
+                break;
+            default:
+                printf ("%s  (Unknown)\n", name);
+        }
+	}
+	
+    return 0;
 }
 
 // TO-DO: erase HDF5, attribute, and parameter viewer contents
