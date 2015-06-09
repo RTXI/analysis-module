@@ -24,7 +24,6 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include <scatterplot.h>
-#include <stdio.h>
 
 class AnalysisTools : public DefaultGUIModel {
 
@@ -66,11 +65,7 @@ class AnalysisTools : public DefaultGUIModel {
 		void closeFile(bool);
 
 	private slots:
-		void toggleTSplot(bool);
-		void toggleScatterplot(bool);
-		void toggleFFTplot(bool);
-		void updateChannelSelection(int);
-		void updateTrialSelection(int);
+		void plotTrial(void);
 		void screenshotTS(void);
 		void screenshotScatter(void);
 		void screenshotFFT(void);

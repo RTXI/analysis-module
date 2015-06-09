@@ -33,6 +33,13 @@
 
 #include <iostream>
 
+// global variables (necessary for op_func)
+QTreeWidget *treeViewer;
+QTreeWidgetItem *treeParent;
+QTreeWidgetItem *treeChild;
+QString currentTrial;
+int currentTrialFlag;
+
 extern "C" Plugin::Object *createRTXIPlugin(void) {
 	return new AnalysisTools();
 }
@@ -134,6 +141,8 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
 	// Global plot options
+	// TO-DO: add pushButtons for plotting each graph (or maybe just one overall "Plot" button
+	//        possibly remove check boxes (they originally served a purpose but may be a bit redundant at this point)
 	QGroupBox *optionBox = new QGroupBox;
 	QGridLayout *optionBoxLayout = new QGridLayout;
 	optionBox->setLayout(optionBoxLayout);
@@ -152,33 +161,25 @@ void AnalysisTools::customizeGUI(void) {
 	plotSelectionLayout->addWidget(plotFFTCheckBox);
 	optionButtons->addButton(plotFFTCheckBox);
 	plotFFTCheckBox->setChecked(true);
-	// TO-DO: disable channelSelection, trialSelection and any scatter/FFT specific options 
-	//        when these are toggled (but leave them disabled if no file has been loaded)
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),saveTSPlotButton,SLOT(setEnabled(bool)));
-	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
+	//QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),splot,SLOT(setEnabled(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),saveScatterPlotButton,SLOT(setEnabled(bool)));
-	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleScatterplot(bool)));
+	//QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleScatterplot(bool)));
 	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),fftplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),saveFFTPlotButton,SLOT(setEnabled(bool)));
-	QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFFTplot(bool)));
+	//QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFFTplot(bool)));
 	plotTSCheckBox->setToolTip("Enable time series plot");
 	plotScatterCheckBox->setToolTip("Enable scatter plot");
 	plotFFTCheckBox->setToolTip("Enable FFT plot");
 	optionBoxLayout->addLayout(plotSelectionLayout, 0, 0);
-	QVBoxLayout *plotOptionsLayout = new QVBoxLayout;
-	QComboBox *channelSelection = new QComboBox;
-	plotOptionsLayout->addWidget(channelSelection);
-	channelSelection->setEnabled(false);
-	QObject::connect(channelSelection,SIGNAL(activated(int)), this, SLOT(updateChannelSelection(int)));
-	channelSelection->setToolTip("Select a channel for display");
-	QComboBox *trialSelection = new QComboBox;
-	plotOptionsLayout->addWidget(trialSelection);
-	trialSelection->setEnabled(false);
-	QObject::connect(trialSelection,SIGNAL(activated(int)), this, SLOT(updateTrialSelection(int)));
-	trialSelection->setToolTip("Select a trial for display");
-	optionBoxLayout->addLayout(plotOptionsLayout, 1, 0);
+	QVBoxLayout *plotButtonLayout = new QVBoxLayout;
+	QPushButton *plotButton = new QPushButton("Plot");
+	plotButtonLayout->addWidget(plotButton);
+	QObject::connect(plotButton,SIGNAL(activated(int)), this, SLOT(plotTrial(void)));
+	plotButton->setToolTip("Plot data for selected trial and channel");
+	optionBoxLayout->addLayout(plotButtonLayout, 1, 0);
 	customlayout->addWidget(optionBox, 1, 0, 1, 1);
 	
 	// Scatter/FFT plot options
@@ -200,10 +201,9 @@ void AnalysisTools::customizeGUI(void) {
 	customlayout->addWidget(fileBox, 0, 0, 1, 1);
 
 	// HDF5 viewer
-	QGroupBox *viewBox = new QGroupBox(tr("HDF5 Viewer"));
-	QHBoxLayout *viewLayout = new QHBoxLayout;
-	viewBox->setLayout(viewLayout);
-	customlayout->addWidget(viewBox, 3, 0, 4, 1);
+	treeViewer = new QTreeWidget;
+	treeViewer->setHeaderLabels(QStringList("HDF5 Viewer"));
+	customlayout->addWidget(treeViewer, 3, 0, 4, 1);
 	
 	// Attributes
 	QGroupBox *attributesBox = new QGroupBox(tr("Attributes"));
@@ -254,25 +254,6 @@ void AnalysisTools::screenshotFFT() {
 void AnalysisTools::clearData() {
 }
 
-void AnalysisTools::toggleTSplot(bool on) {
-}
-
-void AnalysisTools::toggleScatterplot(bool on) {
-}
-
-void AnalysisTools::toggleFFTplot(bool on) {
-}
-
-// TO-DO: if I want to automatically update plots when a new channel/trial is selected, call updatePlot in these two functions
-//        otherwise, add a "Plot" button to plot options that will call updatePlot
-void AnalysisTools::updateChannelSelection(int index) {
-	channelSelected = index;
-}
-
-void AnalysisTools::updateTrialSelection(int index) {
-	trialSelected = index;
-}
-
 void AnalysisTools::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
@@ -302,6 +283,8 @@ void AnalysisTools::changeDataFile(void) {
 //        update and enable trialSelection (trialSelection->insertItem(1, "trial0");)
 //        enable any scatter/FFT specific options
 int AnalysisTools::openFile(QString &filename) {
+	currentTrialFlag = 0;
+	currentTrial = "";
 	if (QFile::exists(filename)) {
 		hid_t file_id;
 		herr_t status;
@@ -310,6 +293,9 @@ int AnalysisTools::openFile(QString &filename) {
 		// Iterate through file
 		printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
+		
+		// TO-DO: remove commented code
+		//treeViewer->addTopLevelItems(treeList);
 		
 		//size_t trial_num;
 		//QString trial_name;
@@ -349,6 +335,7 @@ int AnalysisTools::openFile(QString &filename) {
 }
 
 herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
+	QString qName = QString(name);
     printf ("/"); // Print root group in object path
     if (name[0] == '.') { // Root group, do not print '.'
         printf ("  (Group)\n");
@@ -356,9 +343,24 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
         switch (info->type) {
             case H5O_TYPE_GROUP:
                 printf ("%s  (Group)\n", name);
+                if (!currentTrialFlag) {
+					currentTrialFlag = 1;
+					currentTrial = qName;
+				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data") && !qName.endsWith("Channel Data")) {
+					currentTrialFlag = 0;
+					treeParent = new QTreeWidgetItem;
+					treeParent->setText(0, qName);
+					treeViewer->addTopLevelItem(treeParent);
+				}
                 break;
-            case H5O_TYPE_DATASET:
+            case H5O_TYPE_DATASET: // TO-DO: reset synchDataFlag
                 printf ("%s  (Dataset)\n", name);
+                if (qName.startsWith(currentTrial + "/Synchronous Data")) {
+					printf ("Found synchronous dataset\n");
+					treeChild = new QTreeWidgetItem;
+					treeChild->setText(0, qName);
+					treeParent->addChild(treeChild);
+				}
                 break;
             case H5O_TYPE_NAMED_DATATYPE:
                 printf ("%s  (Datatype)\n", name);
@@ -394,4 +396,7 @@ void AnalysisTools::closeFile(bool shutdown)
 		//QApplication::postEvent(this, event);
 		//data.done.wait(&mutex);
 	//}
+}
+
+void AnalysisTools::plotTrial() {
 }
