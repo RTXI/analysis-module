@@ -57,6 +57,7 @@ class AnalysisTools : public DefaultGUIModel {
 		ScatterPlot *splot;
 		BasicPlot *fftplot;
 		QLineEdit *fileNameEdit;
+		QPushButton *plotButton;
 
 		// custom functions
 		void initParameters(void);

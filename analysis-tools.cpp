@@ -39,6 +39,7 @@ QTreeWidgetItem *treeParent;
 QTreeWidgetItem *treeChild;
 QString currentTrial;
 int currentTrialFlag;
+int firstChannelSelected;
 
 extern "C" Plugin::Object *createRTXIPlugin(void) {
 	return new AnalysisTools();
@@ -141,8 +142,7 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
 	// Global plot options
-	// TO-DO: add pushButtons for plotting each graph (or maybe just one overall "Plot" button
-	//        possibly remove check boxes (they originally served a purpose but may be a bit redundant at this point)
+	// TO-DO: gray out plot button before file is loaded
 	QGroupBox *optionBox = new QGroupBox;
 	QGridLayout *optionBoxLayout = new QGridLayout;
 	optionBox->setLayout(optionBoxLayout);
@@ -175,9 +175,10 @@ void AnalysisTools::customizeGUI(void) {
 	plotFFTCheckBox->setToolTip("Enable FFT plot");
 	optionBoxLayout->addLayout(plotSelectionLayout, 0, 0);
 	QVBoxLayout *plotButtonLayout = new QVBoxLayout;
-	QPushButton *plotButton = new QPushButton("Plot");
+	plotButton = new QPushButton("Plot");
 	plotButtonLayout->addWidget(plotButton);
-	QObject::connect(plotButton,SIGNAL(activated(int)), this, SLOT(plotTrial(void)));
+	plotButton->setEnabled(false);
+	QObject::connect(plotButton,SIGNAL(released(void)), this, SLOT(plotTrial(void)));
 	plotButton->setToolTip("Plot data for selected trial and channel");
 	optionBoxLayout->addLayout(plotButtonLayout, 1, 0);
 	customlayout->addWidget(optionBox, 1, 0, 1, 1);
@@ -285,14 +286,21 @@ void AnalysisTools::changeDataFile(void) {
 int AnalysisTools::openFile(QString &filename) {
 	currentTrialFlag = 0;
 	currentTrial = "";
+	firstChannelSelected = 0;
 	if (QFile::exists(filename)) {
 		hid_t file_id;
 		herr_t status;
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
 		
 		// Iterate through file
-		printf ("Objects in the file:\n");
+		//printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
+		
+		// TO-DO: if file opened successfully, enable plot button and select the first channel of first trial (to block that potential error case)
+		if (!status) {
+			plotButton->setEnabled(true);
+		}
+			
 		
 		// TO-DO: remove commented code
 		//treeViewer->addTopLevelItems(treeList);
@@ -336,17 +344,17 @@ int AnalysisTools::openFile(QString &filename) {
 
 herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
 	QString qName = QString(name);
-    printf ("/"); // Print root group in object path
+    //printf ("/"); // Print root group in object path
     if (name[0] == '.') { // Root group, do not print '.'
-        printf ("  (Group)\n");
+        //printf ("  (Group)\n");
     } else {
         switch (info->type) {
             case H5O_TYPE_GROUP:
-                printf ("%s  (Group)\n", name);
+                //printf ("%s  (Group)\n", name);
                 if (!currentTrialFlag) {
 					currentTrialFlag = 1;
 					currentTrial = qName;
-				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data") && !qName.endsWith("Channel Data")) {
+				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
 					currentTrialFlag = 0;
 					treeParent = new QTreeWidgetItem;
 					treeParent->setText(0, qName);
@@ -354,19 +362,24 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 				}
                 break;
             case H5O_TYPE_DATASET: // TO-DO: reset synchDataFlag
-                printf ("%s  (Dataset)\n", name);
-                if (qName.startsWith(currentTrial + "/Synchronous Data")) {
-					printf ("Found synchronous dataset\n");
+                //printf ("%s  (Dataset)\n", name);
+                if (qName.startsWith(currentTrial + "/Synchronous Data") && !qName.endsWith("Channel Data")) {
+					//printf ("Found synchronous dataset\n");
 					treeChild = new QTreeWidgetItem;
 					treeChild->setText(0, qName);
 					treeParent->addChild(treeChild);
+					if (!firstChannelSelected) {
+						firstChannelSelected = 1;
+						treeViewer->setCurrentItem(treeChild);
+					}
 				}
                 break;
             case H5O_TYPE_NAMED_DATATYPE:
-                printf ("%s  (Datatype)\n", name);
+                //printf ("%s  (Datatype)\n", name);
                 break;
             default:
-                printf ("%s  (Unknown)\n", name);
+                //printf ("%s  (Unknown)\n", name);
+                break;
         }
 	}
 	
