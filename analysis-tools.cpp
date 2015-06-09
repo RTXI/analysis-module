@@ -36,7 +36,8 @@
 // global variables (necessary for op_func)
 QTreeWidget *treeViewer;
 QTreeWidgetItem *treeParent;
-QTreeWidgetItem *treeChild;
+QTreeWidgetItem *treeChild1;
+QTreeWidgetItem *treeChild2;
 QString currentTrial;
 int currentTrialFlag;
 int firstChannelSelected;
@@ -67,16 +68,12 @@ AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, 
 AnalysisTools::~AnalysisTools(void) {}
 
 void AnalysisTools::execute(void) {
-	systime = count * dt; // current time, s
-
-	count++; // increment count to measure time
 	return;
 }
 
 void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 	switch (flag) {
 	case INIT:
-		setState("Time (s)", systime);
 		break;
 	case MODIFY:
 		bookkeep();
@@ -142,7 +139,6 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
 	// Global plot options
-	// TO-DO: gray out plot button before file is loaded
 	QGroupBox *optionBox = new QGroupBox;
 	QGridLayout *optionBoxLayout = new QGridLayout;
 	optionBox->setLayout(optionBoxLayout);
@@ -280,27 +276,23 @@ void AnalysisTools::changeDataFile(void) {
 }
 
 // TO-DO: populate HDF5, attribute, and parameter viewer contents
-//        update and enable channelSelection (channelSelection->insertItem(1, "Ch0");)
-//        update and enable trialSelection (trialSelection->insertItem(1, "trial0");)
 //        enable any scatter/FFT specific options
 int AnalysisTools::openFile(QString &filename) {
+	herr_t status = -1;
 	currentTrialFlag = 0;
 	currentTrial = "";
 	firstChannelSelected = 0;
 	if (QFile::exists(filename)) {
 		hid_t file_id;
-		herr_t status;
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
 		
 		// Iterate through file
 		//printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
 		
-		// TO-DO: if file opened successfully, enable plot button and select the first channel of first trial (to block that potential error case)
 		if (!status) {
 			plotButton->setEnabled(true);
 		}
-			
 		
 		// TO-DO: remove commented code
 		//treeViewer->addTopLevelItems(treeList);
@@ -339,13 +331,13 @@ int AnalysisTools::openFile(QString &filename) {
 	//QApplication::postEvent(this, event);
 	//data.done.wait(&mutex);
 
-	return 0;
+	return status;
 }
 
 herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
 	QString qName = QString(name);
-    //printf ("/"); // Print root group in object path
-    if (name[0] == '.') { // Root group, do not print '.'
+    //printf ("/");
+    if (name[0] == '.') {
         //printf ("  (Group)\n");
     } else {
         switch (info->type) {
@@ -354,23 +346,39 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
                 if (!currentTrialFlag) {
 					currentTrialFlag = 1;
 					currentTrial = qName;
-				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
-					currentTrialFlag = 0;
 					treeParent = new QTreeWidgetItem;
 					treeParent->setText(0, qName);
 					treeViewer->addTopLevelItem(treeParent);
+				} else if (qName.startsWith(currentTrial) && qName.endsWith("Asynchronous Data")) {
+					treeChild1 = new QTreeWidgetItem;
+					treeChild1->setText(0, qName);
+					treeParent->addChild(treeChild1);
+				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
+					currentTrialFlag = 0; // reset flag to start parsing next trial
+					treeChild1 = new QTreeWidgetItem;
+					treeChild1->setText(0, qName);
+					treeParent->addChild(treeChild1);
 				}
                 break;
-            case H5O_TYPE_DATASET: // TO-DO: reset synchDataFlag
+            case H5O_TYPE_DATASET:
                 //printf ("%s  (Dataset)\n", name);
-                if (qName.startsWith(currentTrial + "/Synchronous Data") && !qName.endsWith("Channel Data")) {
-					//printf ("Found synchronous dataset\n");
-					treeChild = new QTreeWidgetItem;
-					treeChild->setText(0, qName);
-					treeParent->addChild(treeChild);
+                if (qName.startsWith(currentTrial + "/Asynchronous Data") && !qName.endsWith("Channel Data")) {
+					treeChild2 = new QTreeWidgetItem;
+					treeChild2->setText(0, qName);
+					treeChild1->addChild(treeChild2);
+					treeChild2->setToolTip(0, qName);
 					if (!firstChannelSelected) {
 						firstChannelSelected = 1;
-						treeViewer->setCurrentItem(treeChild);
+						treeViewer->setCurrentItem(treeChild2);
+					}
+				} else if (qName.startsWith(currentTrial + "/Synchronous Data") && !qName.endsWith("Channel Data")) {
+					treeChild2 = new QTreeWidgetItem;
+					treeChild2->setText(0, qName);
+					treeChild1->addChild(treeChild2);
+					treeChild2->setToolTip(0, qName);
+					if (!firstChannelSelected) {
+						firstChannelSelected = 1;
+						treeViewer->setCurrentItem(treeChild2);
 					}
 				}
                 break;
