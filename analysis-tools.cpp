@@ -48,8 +48,7 @@ extern "C" Plugin::Object *createRTXIPlugin(void) {
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
-	{ "Output", "Output", DefaultGUIModel::OUTPUT, },
-	//{ "Time (s)", "Time (s)", DefaultGUIModel::STATE, }, 
+	{ "Output", "Output", DefaultGUIModel::OUTPUT, }, 
 };
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
@@ -57,7 +56,6 @@ static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
 	setWhatsThis(
 		"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TO-DO: add detail here
-	initParameters();
 	DefaultGUIModel::createGUI(vars, num_vars); // this is required to create the GUI
 	customizeGUI();
 	update(INIT);
@@ -76,16 +74,12 @@ void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 	case INIT:
 		break;
 	case MODIFY:
-		bookkeep();
 		break;
 	case UNPAUSE:
-		bookkeep();
 		break;
 	case PAUSE:
-		output(0) = 0; // stop command in case pause occurs in the middle of command
 		break;
 	case PERIOD:
-		dt = RT::System::getInstance()->getPeriod() * 1e-9;
 		break;
 	default:
 		break;
@@ -221,16 +215,6 @@ void AnalysisTools::customizeGUI(void) {
 	DefaultGUIModel::unloadButton->setToolTip("Close module");
 
 	setLayout(customlayout);
-}
-
-void AnalysisTools::initParameters() {
-	dt = RT::System::getInstance()->getPeriod() * 1e-9; // s
-	bookkeep();
-}
-
-void AnalysisTools::bookkeep() {
-	count = 0;
-	systime = 0;
 }
 
 void AnalysisTools::screenshotTS() {

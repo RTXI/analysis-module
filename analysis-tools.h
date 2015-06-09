@@ -44,13 +44,6 @@ class AnalysisTools : public DefaultGUIModel {
 
 	private:
 		// inputs, states, calculated values
-		long long count;
-		double systime;
-		double dt;
-		
-		// global variables
-		int channelSelected;
-		int trialSelected;
 		
 		// QT components
 		BasicPlot *tsplot;
@@ -60,8 +53,6 @@ class AnalysisTools : public DefaultGUIModel {
 		QPushButton *plotButton;
 
 		// custom functions
-		void initParameters(void);
-		void bookkeep(void);
 		int openFile(QString &filename);
 		void closeFile(bool);
 
