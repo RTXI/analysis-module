@@ -235,6 +235,8 @@ void AnalysisTools::screenshotFFT() {
 void AnalysisTools::clearData() {
 }
 
+// TO-DO: may need to restore toggle functions to allow plots to be cleared when deselected
+
 void AnalysisTools::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
@@ -261,63 +263,26 @@ void AnalysisTools::changeDataFile(void) {
 
 // TO-DO: populate HDF5, attribute, and parameter viewer contents
 //        enable any scatter/FFT specific options
+//        call closeFile if fileLoaded flag is set to 1
 int AnalysisTools::openFile(QString &filename) {
 	herr_t status = -1;
 	currentTrialFlag = 0;
 	currentTrial = "";
 	firstChannelSelected = 0;
 	if (QFile::exists(filename)) {
-		hid_t file_id;
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
 		
 		// Iterate through file
 		//printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
 		
-		if (!status) {
-			plotButton->setEnabled(true);
-		}
-		
-		// TO-DO: remove commented code
-		//treeViewer->addTopLevelItems(treeList);
-		
-		//size_t trial_num;
-		//QString trial_name;
-		//for (trial_num = 1;; ++trial_num) {
-			//trial_name = "/Trial" + QString::number(trial_num);
-			//file.trial = H5Gopen(file.id, trial_name.toLatin1().constData(), H5P_DEFAULT);
-			//if (file.trial < 0) {
-				//H5Eclear(H5E_DEFAULT);
-				//break;
-			//} else
-				//H5Gclose(file.trial);
-		//}
-		//trialNum->setNum(int(trial_num)-1);
+		if (!status) plotButton->setEnabled(true);
 	}
-	//if (file.id < 0) {
-		//H5E_type_t error_type;
-		//size_t error_size;
-		//error_size = H5Eget_msg(file.id, &error_type, NULL, 0);
-		//char error_msg[error_size + 1];
-		//H5Eget_msg(file.id, &error_type, error_msg, error_size);
-		//error_msg[error_size] = 0;
-		//H5Eclear(file.id);
-
-		//ERROR_MSG("DataRecorder::Panel::processData : failed to open \"%s\" for writing with error : %s\n", filename.toStdString().c_str(),error_msg);
-		//return -1;
-	//}
-
-	//CustomEvent *event = new CustomEvent(static_cast<QEvent::Type>QSetFileNameEditEvent);
-	//SetFileNameEditEventData data;
-	//data.filename = filename;
-	//event->setData(static_cast<void*>(&data));
-
-	//QApplication::postEvent(this, event);
-	//data.done.wait(&mutex);
 
 	return status;
 }
 
+// TO-DO: clean up treeViewer -- no need to list full path for each parent/child
 herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
 	QString qName = QString(name);
     //printf ("/");
@@ -379,8 +344,7 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 }
 
 // TO-DO: erase HDF5, attribute, and parameter viewer contents
-//        erase contents of channelSelection and trialSelection
-//        disable channelSelection, trialSelection and any scatter/FFT specific options
+//        disable plot button and any scatter/FFT specific options
 void AnalysisTools::closeFile(bool shutdown)
 {
 //#ifdef DEBUG
@@ -403,5 +367,59 @@ void AnalysisTools::closeFile(bool shutdown)
 	//}
 }
 
+// TO-DO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
 void AnalysisTools::plotTrial() {
+	// TO-DO: check that current item is a dataset (and not a group), only open/plot if a dataset is selected (maybe display an warning otherwise?)
+	//        need to open appropriate column in Channel Data, not the header dataset
+	//        plot using QWT and setData/setSamples -- look into their assocated warnings
+	//        only plot if check boxes are selected
+	herr_t status;
+	hsize_t dims[2];
+	hid_t datatype_id;
+	hid_t filespace_id;
+	hid_t dapl_id;
+	hid_t memspace_id;
+	QString selectedTrial = treeViewer->currentItem()->text(0);
+	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
+	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
+	
+	//printf("channelToRead: %s\n", channelToRead.toLatin1().constData());
+	dataset_id = H5Dopen2(file_id, channelToRead.toLatin1().constData(), H5P_DEFAULT);
+	datatype_id = H5Dget_type(dataset_id);
+	filespace_id = H5Dget_space(dataset_id);
+	// First problem: this should load the dimensions of the dataset, it loads the first dimension correctly but sets dim[1] to 0 (I expected it to be 4)
+	status = H5Sget_simple_extent_dims(filespace_id, dims, NULL); // TO-DO: potential segfault here (but I don't think we need to worry about multidimensional datasets -- look into it)
+	dapl_id = H5Dget_access_plist(dataset_id);
+	// Function will fail here until dim[1] is something other than 0
+	//memspace_id = H5Screate_simple(2, dims, NULL);
+	
+	printf("dataset_id: %d\n" "datatype_id: %d\n" "filespace_id: %d\n" "dims[0]: %d\n" "dims[1]: %d\n" "dapl_id: %d\n" "memspace_id: %d\n", dataset_id, datatype_id, filespace_id, dims[0], dims[1], dapl_id, memspace_id);
+	
+	// Initialize data buffer
+	// Second problem: might be a better way to do this -- currently produces an error due to dim[1] being 0
+	//                 change dim[1] to 1 or something else to get it working
+	// TO-DO: should probably initialize this to 0
+	double data_buffer[dims[0]][dims[1]];
+	
+	// Read dataset into data_buffer
+	//status = H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count, NULL); // don't think this is necessary but leaving it here for now
+	
+	// Biggest problem: uncomment this to see crashing with no terminal output
+	//                  change H5S_ALL to memspace_id to see infinite loop crash (I think)
+	//                  possible problems: filespace or memspace (leaning toward memspace), casting data_buffer to void* (I've seen some code that did that but originally left it out)
+	//status = H5Dread(dataset_id, datatype_id, H5S_ALL, filespace_id, H5P_DEFAULT, (void*)data_buffer); // H5P_DEFAULT is the issue here
+	
+	
+	// The rest is easier
+	// TO-DO: read time duration and period, build time vector for plotting
+	
+	// TO-DO: plot selected trial and channel
+	//tsplot->setData(
+	
+	// close everything
+	H5Sclose(memspace_id);
+	H5Pclose(dapl_id);
+	H5Sclose(filespace_id);
+	H5Tclose(datatype_id);
+	H5Dclose(dataset_id);
 }

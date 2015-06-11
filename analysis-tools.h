@@ -45,6 +45,10 @@ class AnalysisTools : public DefaultGUIModel {
 	private:
 		// inputs, states, calculated values
 		
+		// File I/O
+		hid_t file_id;
+		hid_t dataset_id;
+		
 		// QT components
 		BasicPlot *tsplot;
 		ScatterPlot *splot;
