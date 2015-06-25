@@ -59,6 +59,7 @@ class AnalysisTools : public DefaultGUIModel {
 		// custom functions
 		int openFile(QString &filename);
 		void closeFile(bool);
+		void dump_vals(double *, int, hsize_t*);
 
 	private slots:
 		void plotTrial(void);

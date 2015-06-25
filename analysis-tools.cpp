@@ -422,7 +422,8 @@ void AnalysisTools::plotTrial() {
 		printf("Throw error - H5Screate_simple error %d\n", memspace_id);
 
 	// Print for debug
-	printf("dataset_id: %d\n" "datatype_id: %d\n" "dataspace_id: %d\n" "memspace_id: %d\n" "rank: %d\n" "dimensions: %lu x %lu \n\n", dataset_id, datatype_id, dataspace_id, memspace_id, rank, (unsigned long)(dims[0]), (unsigned long)(dims[1]));
+	printf("dataset_id: %d\n" "datatype_id: %d\n" "dataspace_id: %d\n" "memspace_id: %d\n" "rank: %d\n" "dimensions: %lu x %lu \n\n",
+			dataset_id, datatype_id, dataspace_id, memspace_id, rank, (unsigned long)(dims[0]), (unsigned long)(dims[1]));
 
 	// Initialize data buffer using rank 
 	if(rank == 1)
@@ -435,6 +436,9 @@ void AnalysisTools::plotTrial() {
 	if(status < 0)
 		printf("Throw error - H5Dread error %d\n", status);
 
+	// Temporarily use print to check if data is really there
+	dump_vals(data_buffer, rank, dims);
+
 	// The rest is easier
 	// TO-DO: read time duration and period, build time vector for plotting
 
@@ -446,4 +450,20 @@ void AnalysisTools::plotTrial() {
 	H5Tclose(datatype_id);
 	H5Sclose(memspace_id);
 	H5Sclose(dataspace_id);
+}
+
+// Temporary function for validating data access
+void AnalysisTools::dump_vals(double *data, int rank, hsize_t *ndims)
+{
+	printf("Rank: %d\n"
+			"Dimensions: %lu x %lu \n\n", 
+			rank, (unsigned long)(ndims[0]),
+			(unsigned long)(ndims[1]));
+
+	for(size_t i=0; i<ndims[0]; i++)
+		if(ndims[1] == 0)
+			printf("value is %f\n", data[i]);
+		else
+			for(size_t j=0; j<ndims[1]; j++)
+				printf("value is %f\n", data[i*ndims[1]+j]);
 }
