@@ -20,6 +20,7 @@
 #include <QMessageBox>
 #include <QFileInfo>
 
+#include <qwt_plot_curve.h>
 #include <default_gui_model.h>
 #include <hdf5.h>
 #include <hdf5_hl.h>
@@ -49,7 +50,7 @@ class AnalysisTools : public DefaultGUIModel {
 		hid_t file_id;
 		hid_t dataset_id;
 		
-		// QT components
+		// GUI components
 		BasicPlot *tsplot;
 		ScatterPlot *splot;
 		BasicPlot *fftplot;

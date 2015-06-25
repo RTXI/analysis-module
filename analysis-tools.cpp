@@ -33,7 +33,11 @@
 
 #include <iostream>
 
-// global variables (necessary for op_func)
+extern "C" Plugin::Object *createRTXIPlugin(void) {
+	return new AnalysisTools();
+}
+
+// Globals
 QTreeWidget *treeViewer;
 QTreeWidgetItem *treeParent;
 QTreeWidgetItem *treeChild1;
@@ -41,10 +45,6 @@ QTreeWidgetItem *treeChild2;
 QString currentTrial;
 int currentTrialFlag;
 int firstChannelSelected;
-
-extern "C" Plugin::Object *createRTXIPlugin(void) {
-	return new AnalysisTools();
-}
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
@@ -113,6 +113,7 @@ void AnalysisTools::customizeGUI(void) {
 	tsplot->setFixedSize(450, 270);
 	tsplotBoxLayout->addWidget(tsplot);
 	customlayout->addWidget(tsplotBox, 1, 2, 3, 2);
+
 	QGroupBox *scatterplotBox = new QGroupBox("Scatter Plot");
 	QHBoxLayout *scatterplotBoxLayout = new QHBoxLayout;
 	scatterplotBox->setLayout(scatterplotBoxLayout);
@@ -389,7 +390,7 @@ void AnalysisTools::plotTrial() {
 	dataset_id = H5Dopen2(file_id, channelToRead.toLatin1().constData(), H5P_DEFAULT);
 	if(dataset_id < 0)
 		printf("Throw error - H5Dopen2 error %d\n", dataset_id);
-	
+
 	// Get dataset info
 	datatype_id = H5Dget_type(dataset_id);
 	if(datatype_id < 0)
@@ -425,7 +426,7 @@ void AnalysisTools::plotTrial() {
 	printf("dataset_id: %d\n" "datatype_id: %d\n" "dataspace_id: %d\n" "memspace_id: %d\n" "rank: %d\n" "dimensions: %lu x %lu \n\n",
 			dataset_id, datatype_id, dataspace_id, memspace_id, rank, (unsigned long)(dims[0]), (unsigned long)(dims[1]));
 
-	// Initialize data buffer using rank 
+	// Initialize data buffer using rank  (which will always be 1, no matter how many channels)
 	if(rank == 1)
 		data_buffer = (double *)malloc(sizeof(double)*dims[0]);
 	else if(rank == 2)
@@ -443,7 +444,6 @@ void AnalysisTools::plotTrial() {
 	// TO-DO: read time duration and period, build time vector for plotting
 
 	// TO-DO: plot selected trial and channel
-	//tsplot->setData(
 
 	// Close everything
 	H5Dclose(dataset_id);
@@ -455,12 +455,8 @@ void AnalysisTools::plotTrial() {
 // Temporary function for validating data access
 void AnalysisTools::dump_vals(double *data, int rank, hsize_t *ndims)
 {
-	printf("Rank: %d\n"
-			"Dimensions: %lu x %lu \n\n", 
-			rank, (unsigned long)(ndims[0]),
-			(unsigned long)(ndims[1]));
-
-	for(size_t i=0; i<ndims[0]; i++)
+	// Only printing first value out or else the printf will block
+	for(size_t i=0; i<1; i++)
 		if(ndims[1] == 0)
 			printf("value is %f\n", data[i]);
 		else
