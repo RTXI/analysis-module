@@ -1,18 +1,18 @@
 /*
- Copyright (C) 2015 Georgia Institute of Technology
+	 Copyright (C) 2015 Georgia Institute of Technology
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+	 This program is free software: you can redistribute it and/or modify
+	 it under the terms of the GNU General Public License as published by
+	 the Free Software Foundation, either version 3 of the License, or
+	 (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+	 This program is distributed in the hope that it will be useful,
+	 but WITHOUT ANY WARRANTY; without even the implied warranty of
+	 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	 GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	 You should have received a copy of the GNU General Public License
+	 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  */
 
@@ -55,7 +55,7 @@ static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 
 AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
 	setWhatsThis(
-		"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TO-DO: add detail here
+			"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TO-DO: add detail here
 	DefaultGUIModel::createGUI(vars, num_vars); // this is required to create the GUI
 	customizeGUI();
 	update(INIT);
@@ -71,24 +71,24 @@ void AnalysisTools::execute(void) {
 
 void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 	switch (flag) {
-	case INIT:
-		break;
-	case MODIFY:
-		break;
-	case UNPAUSE:
-		break;
-	case PAUSE:
-		break;
-	case PERIOD:
-		break;
-	default:
-		break;
+		case INIT:
+			break;
+		case MODIFY:
+			break;
+		case UNPAUSE:
+			break;
+		case PAUSE:
+			break;
+		case PERIOD:
+			break;
+		default:
+			break;
 	}
 };
 
 void AnalysisTools::customizeGUI(void) {
 	QGridLayout *customlayout = DefaultGUIModel::getLayout(); 
-	
+
 	// Screenshot buttons
 	QGroupBox *plotBox = new QGroupBox("Save Screenshot");
 	QHBoxLayout *plotBoxLayout = new QHBoxLayout;
@@ -104,7 +104,7 @@ void AnalysisTools::customizeGUI(void) {
 	plotBoxLayout->addWidget(saveFFTPlotButton);
 	customlayout->addWidget(plotBox, 0, 2, 1, 4);
 	plotBox->setMinimumSize(910, 0);
-	
+
 	// Initialize plots
 	QGroupBox *tsplotBox = new QGroupBox("Time Series Plot");
 	QHBoxLayout *tsplotBoxLayout = new QHBoxLayout;
@@ -172,12 +172,12 @@ void AnalysisTools::customizeGUI(void) {
 	plotButton->setToolTip("Plot data for selected trial and channel");
 	optionBoxLayout->addLayout(plotButtonLayout, 1, 0);
 	customlayout->addWidget(optionBox, 1, 0, 1, 1);
-	
+
 	// Scatter/FFT plot options
 	QGroupBox *plotOptionsBox = new QGroupBox(tr("Scatter/FFT Plot Options"));
 	// TO-DO: add detail here (later)
 	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
-	
+
 	// File control
 	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
 	QHBoxLayout *fileLayout = new QHBoxLayout;
@@ -195,13 +195,13 @@ void AnalysisTools::customizeGUI(void) {
 	treeViewer = new QTreeWidget;
 	treeViewer->setHeaderLabels(QStringList("HDF5 Viewer"));
 	customlayout->addWidget(treeViewer, 3, 0, 4, 1);
-	
+
 	// Attributes
 	QGroupBox *attributesBox = new QGroupBox(tr("Attributes"));
 	QHBoxLayout *attributesLayout = new QHBoxLayout;
 	attributesBox->setLayout(attributesLayout);
 	customlayout->addWidget(attributesBox, 4, 2, 3, 1);
-	
+
 	// Parameters
 	QGroupBox *paramsBox = new QGroupBox(tr("Parameters"));
 	QHBoxLayout *paramsLayout = new QHBoxLayout;
@@ -218,18 +218,18 @@ void AnalysisTools::customizeGUI(void) {
 }
 
 void AnalysisTools::screenshotTS() {
-    QwtPlotRenderer renderer;
-    renderer.exportTo(tsplot,"screenshot.pdf");
+	QwtPlotRenderer renderer;
+	renderer.exportTo(tsplot,"screenshot.pdf");
 }
 
 void AnalysisTools::screenshotScatter() {
-    QwtPlotRenderer renderer;
-    renderer.exportTo(splot,"screenshot.pdf");
+	QwtPlotRenderer renderer;
+	renderer.exportTo(splot,"screenshot.pdf");
 }
 
 void AnalysisTools::screenshotFFT() {
-    QwtPlotRenderer renderer;
-    renderer.exportTo(fftplot,"screenshot.pdf");
+	QwtPlotRenderer renderer;
+	renderer.exportTo(fftplot,"screenshot.pdf");
 }
 
 void AnalysisTools::clearData() {
@@ -271,11 +271,11 @@ int AnalysisTools::openFile(QString &filename) {
 	firstChannelSelected = 0;
 	if (QFile::exists(filename)) {
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
-		
+
 		// Iterate through file
 		//printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
-		
+
 		if (!status) plotButton->setEnabled(true);
 	}
 
@@ -285,14 +285,14 @@ int AnalysisTools::openFile(QString &filename) {
 // TO-DO: clean up treeViewer -- no need to list full path for each parent/child
 herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
 	QString qName = QString(name);
-    //printf ("/");
-    if (name[0] == '.') {
-        //printf ("  (Group)\n");
-    } else {
-        switch (info->type) {
-            case H5O_TYPE_GROUP:
-                //printf ("%s  (Group)\n", name);
-                if (!currentTrialFlag) {
+	//printf ("/");
+	if (name[0] == '.') {
+		//printf ("  (Group)\n");
+	} else {
+		switch (info->type) {
+			case H5O_TYPE_GROUP:
+				//printf ("%s  (Group)\n", name);
+				if (!currentTrialFlag) {
 					currentTrialFlag = 1;
 					currentTrial = qName;
 					treeParent = new QTreeWidgetItem;
@@ -308,10 +308,10 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 					treeChild1->setText(0, qName);
 					treeParent->addChild(treeChild1);
 				}
-                break;
-            case H5O_TYPE_DATASET:
-                //printf ("%s  (Dataset)\n", name);
-                if (qName.startsWith(currentTrial + "/Asynchronous Data") && !qName.endsWith("Channel Data")) {
+				break;
+			case H5O_TYPE_DATASET:
+				//printf ("%s  (Dataset)\n", name);
+				if (qName.startsWith(currentTrial + "/Asynchronous Data") && !qName.endsWith("Channel Data")) {
 					treeChild2 = new QTreeWidgetItem;
 					treeChild2->setText(0, qName);
 					treeChild1->addChild(treeChild2);
@@ -330,40 +330,40 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 						treeViewer->setCurrentItem(treeChild2);
 					}
 				}
-                break;
-            case H5O_TYPE_NAMED_DATATYPE:
-                //printf ("%s  (Datatype)\n", name);
-                break;
-            default:
-                //printf ("%s  (Unknown)\n", name);
-                break;
-        }
+				break;
+			case H5O_TYPE_NAMED_DATATYPE:
+				//printf ("%s  (Datatype)\n", name);
+				break;
+			default:
+				//printf ("%s  (Unknown)\n", name);
+				break;
+		}
 	}
-	
-    return 0;
+
+	return 0;
 }
 
 // TO-DO: erase HDF5, attribute, and parameter viewer contents
 //        disable plot button and any scatter/FFT specific options
 void AnalysisTools::closeFile(bool shutdown)
 {
-//#ifdef DEBUG
+	//#ifdef DEBUG
 	//if(!pthread_equal(pthread_self(),thread))
 	//{
-		//ERROR_MSG("DataRecorder::Panel::closeFile : called by invalid thread\n");
-		//PRINT_BACKTRACE();
+	//ERROR_MSG("DataRecorder::Panel::closeFile : called by invalid thread\n");
+	//PRINT_BACKTRACE();
 	//}
-//#endif
+	//#endif
 
 	//H5Fclose(file.id);
 	//if (!shutdown) {
-		//CustomEvent *event = new CustomEvent(static_cast<QEvent::Type>QSetFileNameEditEvent);
-		//SetFileNameEditEventData data;
-		//data.filename = "";
-		//event->setData(static_cast<void*>(&data));
+	//CustomEvent *event = new CustomEvent(static_cast<QEvent::Type>QSetFileNameEditEvent);
+	//SetFileNameEditEventData data;
+	//data.filename = "";
+	//event->setData(static_cast<void*>(&data));
 
-		//QApplication::postEvent(this, event);
-		//data.done.wait(&mutex);
+	//QApplication::postEvent(this, event);
+	//data.done.wait(&mutex);
 	//}
 }
 
@@ -375,51 +375,75 @@ void AnalysisTools::plotTrial() {
 	//        only plot if check boxes are selected
 	herr_t status;
 	hsize_t dims[2];
-	hid_t datatype_id;
-	hid_t filespace_id;
-	hid_t dapl_id;
-	hid_t memspace_id;
+	hid_t dataset_id, datatype_id, dataspace_id, memspace_id;
+	H5T_class_t class_id;
+	int rank, dim_status;
+	double *data_buffer;
+
+	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
 	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
 	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
-	
-	//printf("channelToRead: %s\n", channelToRead.toLatin1().constData());
+
+	// Open dataset
 	dataset_id = H5Dopen2(file_id, channelToRead.toLatin1().constData(), H5P_DEFAULT);
+	if(dataset_id < 0)
+		printf("Throw error - H5Dopen2 error %d\n", dataset_id);
+	
+	// Get dataset info
 	datatype_id = H5Dget_type(dataset_id);
-	filespace_id = H5Dget_space(dataset_id);
-	// First problem: this should load the dimensions of the dataset, it loads the first dimension correctly but sets dim[1] to 0 (I expected it to be 4)
-	status = H5Sget_simple_extent_dims(filespace_id, dims, NULL); // TO-DO: potential segfault here (but I don't think we need to worry about multidimensional datasets -- look into it)
-	dapl_id = H5Dget_access_plist(dataset_id);
-	// Function will fail here until dim[1] is something other than 0
-	//memspace_id = H5Screate_simple(2, dims, NULL);
-	
-	printf("dataset_id: %d\n" "datatype_id: %d\n" "filespace_id: %d\n" "dims[0]: %d\n" "dims[1]: %d\n" "dapl_id: %d\n" "memspace_id: %d\n", dataset_id, datatype_id, filespace_id, dims[0], dims[1], dapl_id, memspace_id);
-	
-	// Initialize data buffer
-	// Second problem: might be a better way to do this -- currently produces an error due to dim[1] being 0
-	//                 change dim[1] to 1 or something else to get it working
-	// TO-DO: should probably initialize this to 0
-	double data_buffer[dims[0]][dims[1]];
-	
-	// Read dataset into data_buffer
-	//status = H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offset, NULL, count, NULL); // don't think this is necessary but leaving it here for now
-	
-	// Biggest problem: uncomment this to see crashing with no terminal output
-	//                  change H5S_ALL to memspace_id to see infinite loop crash (I think)
-	//                  possible problems: filespace or memspace (leaning toward memspace), casting data_buffer to void* (I've seen some code that did that but originally left it out)
-	//status = H5Dread(dataset_id, datatype_id, H5S_ALL, filespace_id, H5P_DEFAULT, (void*)data_buffer); // H5P_DEFAULT is the issue here
-	
-	
+	if(datatype_id < 0)
+		printf("Throw error - H5Dget_type %d\n", datatype_id);
+
+	// Get dataset class
+	class_id = H5Tget_class(datatype_id);
+	if(class_id < 0)
+		printf("Throw error - H5Tget_class %d\n", class_id);
+
+	// Get dataset space in bytes
+	dataspace_id = H5Dget_space(dataset_id);
+	if(dataspace_id < 0)
+		printf("Throw error - H5Dget_space error %d\n", dataspace_id);
+
+	// Get rank of dataspace
+	rank = H5Sget_simple_extent_ndims(dataspace_id);
+	if(rank < 0)
+		printf("Throw error - H5Sget_simple_extent_ndims error %d\n", rank);
+
+	// Get dimensions of data
+	// If the second dimension is zero, then the dataset is a scalar
+	dim_status = H5Sget_simple_extent_dims(dataspace_id, dims, NULL);
+	if(dim_status < 0)
+		printf("Throw error - H5Sget_simple_extent_dims error %d\n", dim_status);
+
+	// Define memory dataspace
+	memspace_id = H5Screate_simple(rank, dims, NULL);
+	if(memspace_id < 0)
+		printf("Throw error - H5Screate_simple error %d\n", memspace_id);
+
+	// Print for debug
+	printf("dataset_id: %d\n" "datatype_id: %d\n" "dataspace_id: %d\n" "memspace_id: %d\n" "rank: %d\n" "dimensions: %lu x %lu \n\n", dataset_id, datatype_id, dataspace_id, memspace_id, rank, (unsigned long)(dims[0]), (unsigned long)(dims[1]));
+
+	// Initialize data buffer using rank 
+	if(rank == 1)
+		data_buffer = (double *)malloc(sizeof(double)*dims[0]);
+	else if(rank == 2)
+		data_buffer = (double *)malloc(sizeof(double)*dims[0]*dims[1]);
+
+	// Read data
+	status = H5Dread(dataset_id, datatype_id, memspace_id, dataspace_id, H5P_DEFAULT, data_buffer);
+	if(status < 0)
+		printf("Throw error - H5Dread error %d\n", status);
+
 	// The rest is easier
 	// TO-DO: read time duration and period, build time vector for plotting
-	
+
 	// TO-DO: plot selected trial and channel
 	//tsplot->setData(
-	
-	// close everything
-	H5Sclose(memspace_id);
-	H5Pclose(dapl_id);
-	H5Sclose(filespace_id);
-	H5Tclose(datatype_id);
+
+	// Close everything
 	H5Dclose(dataset_id);
+	H5Tclose(datatype_id);
+	H5Sclose(memspace_id);
+	H5Sclose(dataspace_id);
 }
