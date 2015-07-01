@@ -59,7 +59,7 @@ class AnalysisTools : public DefaultGUIModel {
 
 		// custom functions
 		int openFile(QString &filename);
-		void closeFile(bool);
+		void closeFile();
 		void dump_vals(double *, hsize_t*);
 
 	private slots:

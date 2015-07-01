@@ -45,6 +45,7 @@ QTreeWidgetItem *treeChild2;
 QString currentTrial;
 int currentTrialFlag;
 int firstChannelSelected;
+double *data_buffer;
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
@@ -63,7 +64,11 @@ AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, 
 	QTimer::singleShot(0, this, SLOT(resizeMe()));
 }
 
-AnalysisTools::~AnalysisTools(void) {}
+AnalysisTools::~AnalysisTools(void)
+{
+	H5Fclose(file_id);
+	free(data_buffer);
+}
 
 void AnalysisTools::execute(void) {
 	return;
@@ -121,6 +126,7 @@ void AnalysisTools::customizeGUI(void) {
 	splot->setFixedSize(450, 270);
 	scatterplotBoxLayout->addWidget(splot);
 	customlayout->addWidget(scatterplotBox, 1, 4, 3, 2);
+
 	QGroupBox *fftplotBox = new QGroupBox("FFT Plot");
 	QHBoxLayout *fftplotBoxLayout = new QHBoxLayout;
 	fftplotBox->setLayout(fftplotBoxLayout);
@@ -128,6 +134,7 @@ void AnalysisTools::customizeGUI(void) {
 	fftplot->setFixedSize(450, 270);
 	fftplotBoxLayout->addWidget(fftplot);
 	customlayout->addWidget(fftplotBox, 4, 4, 3, 2);
+
 	// Connect screenshot buttons to functions
 	QObject::connect(saveTSPlotButton, SIGNAL(clicked()), this, SLOT(screenshotTS()));
 	QObject::connect(saveScatterPlotButton, SIGNAL(clicked()), this, SLOT(screenshotScatter()));
@@ -165,6 +172,7 @@ void AnalysisTools::customizeGUI(void) {
 	plotScatterCheckBox->setToolTip("Enable scatter plot");
 	plotFFTCheckBox->setToolTip("Enable FFT plot");
 	optionBoxLayout->addLayout(plotSelectionLayout, 0, 0);
+
 	QVBoxLayout *plotButtonLayout = new QVBoxLayout;
 	plotButton = new QPushButton("Plot");
 	plotButtonLayout->addWidget(plotButton);
@@ -210,9 +218,8 @@ void AnalysisTools::customizeGUI(void) {
 	customlayout->addWidget(paramsBox, 4, 3, 3, 1);
 
 	// Standard module buttons
-	QObject::connect(DefaultGUIModel::pauseButton,SIGNAL(toggled(bool)),DefaultGUIModel::modifyButton,SLOT(setEnabled(bool)));
-	DefaultGUIModel::pauseButton->setToolTip("Start/Stop analysis tools");
-	DefaultGUIModel::modifyButton->setToolTip("Commit changes to parameter values");
+	DefaultGUIModel::pauseButton->setEnabled(false);
+	DefaultGUIModel::modifyButton->setEnabled(false);
 	DefaultGUIModel::unloadButton->setToolTip("Close module");
 
 	setLayout(customlayout);
@@ -264,22 +271,21 @@ void AnalysisTools::changeDataFile(void) {
 
 // TO-DO: populate HDF5, attribute, and parameter viewer contents
 //        enable any scatter/FFT specific options
-//        call closeFile if fileLoaded flag is set to 1
 int AnalysisTools::openFile(QString &filename) {
 	herr_t status = -1;
 	currentTrialFlag = 0;
 	currentTrial = "";
 	firstChannelSelected = 0;
+
 	if (QFile::exists(filename)) {
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
-
 		// Iterate through file
-		//printf ("Objects in the file:\n");
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
-
-		if (!status) plotButton->setEnabled(true);
+		if (!status)
+			plotButton->setEnabled(true);
+		else
+			closeFile();
 	}
-
 	return status;
 }
 
@@ -346,26 +352,12 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 
 // TO-DO: erase HDF5, attribute, and parameter viewer contents
 //        disable plot button and any scatter/FFT specific options
-void AnalysisTools::closeFile(bool shutdown)
+void AnalysisTools::closeFile()
 {
-	//#ifdef DEBUG
-	//if(!pthread_equal(pthread_self(),thread))
-	//{
-	//ERROR_MSG("DataRecorder::Panel::closeFile : called by invalid thread\n");
-	//PRINT_BACKTRACE();
-	//}
-	//#endif
-
-	//H5Fclose(file.id);
-	//if (!shutdown) {
-	//CustomEvent *event = new CustomEvent(static_cast<QEvent::Type>QSetFileNameEditEvent);
-	//SetFileNameEditEventData data;
-	//data.filename = "";
-	//event->setData(static_cast<void*>(&data));
-
-	//QApplication::postEvent(this, event);
-	//data.done.wait(&mutex);
-	//}
+	if(file_id)
+		H5Fclose(file_id);
+	if(data_buffer)
+		free(data_buffer);
 }
 
 // TO-DO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
@@ -375,18 +367,18 @@ void AnalysisTools::plotTrial() {
 	//        plot using QWT and setData/setSamples -- look into their assocated warnings
 	//        only plot if check boxes are selected
 	herr_t status;
-	hsize_t dims[2], nrecords;
-	hid_t packettable_id;
+	hsize_t dims[2], nrecords, ntrials, nchannels;
+	hid_t packettable_id, trial_id;
 	int dim_status;
-	double *data_buffer;
 
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
 	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
+	QString trialToRead = treeViewer->currentItem()->parent()->text(0);
 	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
 
 	// Open packet table
-	packettable_id = H5PTopen(file_id, channelToRead.toStdString().c_str());
+	packettable_id = H5PTopen(file_id, channelToRead.toLatin1().constData());
 	if(packettable_id < 0)
 		printf("Throw error - H5PTopen error %d\n", packettable_id);
 
@@ -395,35 +387,57 @@ void AnalysisTools::plotTrial() {
 	if(status < 0)
 		printf("Throw error - H5PTget_num_packets error %d\n", status);
 
+	// Get number of trials
+	status = H5Gget_num_objs(file_id, &ntrials);
+	if(status < 0)
+		printf("Throw error - H5Gget_num_objs %d\n", status);
+
+	// Get identifier for trial and group
+	printf("%s\n", trialToRead.toStdString().c_str());
+	trial_id = H5Gopen1(file_id, trialToRead.toLatin1().constData());
+	if(trial_id < 0)
+		printf("Throw error - H5Gopen1 %d\n", trial_id);
+
+	// Get number of channels from trial
+	// Returned number of objects includes "Channel Data" struct, so we subtract 1
+	status = H5Gget_num_objs(trial_id, &nchannels);
+	if(status < 0)
+		printf("Throw error - H5Gget_num_objs %d\n", status);
+	nchannels--;
+
 	// Initialize data buffer 
-	// TODO: Initialize using nrecords*numChannels
-	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords));
+	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
 
 	// Print for debug
 	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
-	//	(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
+			//(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
 	// Read data
-	status = H5PTread_packets(packettable_id, 0, (int)nrecords/2, data_buffer);
+	status = H5PTread_packets(packettable_id, 0, (int)nrecords, data_buffer);
 	if(status < 0)
-		printf("Throw error - H5Dread error %d\n", status);
-
-	// Temporarily use print to check if data is really there
-	dump_vals(data_buffer, dims);
+		printf("Throw error - H5PTread_packets error %d\n", status);
 
 	// The rest is easier
 	// TO-DO: read time duration and period, build time vector for plotting
 
 	// TO-DO: plot selected trial and channel
+	// need to build time vector
+	QwtPlotCurve *tscurve = new QwtPlotCurve;
+	tscurve->attach(tsplot);
+	tscurve->setRawSamples(data_buffer, data_buffer, (int)nrecords);
 
-	// Close everything
+	// Refresh enabled plots
+	tsplot->replot();
+
+	// Close identifiers
 	H5PTclose(packettable_id);
+	H5Gclose(trial_id);
 }
 
 // Temporary function for validating data access
 void AnalysisTools::dump_vals(double *data, hsize_t *ndims)
 {
 	// Only printing first value out or else the printf will block
-	for(size_t i=0; i<100; i++)
+	for(size_t i=0; i<10; i++)
 		printf("value is %f\n", data[i]);
 }
