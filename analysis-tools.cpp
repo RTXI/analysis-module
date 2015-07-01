@@ -14,7 +14,7 @@
 	 You should have received a copy of the GNU General Public License
 	 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
- */
+*/
 
 /*
  * HDF viewer and analysis tools
@@ -375,10 +375,9 @@ void AnalysisTools::plotTrial() {
 	//        plot using QWT and setData/setSamples -- look into their assocated warnings
 	//        only plot if check boxes are selected
 	herr_t status;
-	hsize_t dims[2];
-	hid_t dataset_id, datatype_id, dataspace_id, memspace_id;
-	H5T_class_t class_id;
-	int rank, dim_status;
+	hsize_t dims[2], nrecords;
+	hid_t packettable_id;
+	int dim_status;
 	double *data_buffer;
 
 	// Get elements from GUI
@@ -386,59 +385,31 @@ void AnalysisTools::plotTrial() {
 	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
 	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
 
-	// Open dataset
-	dataset_id = H5Dopen2(file_id, channelToRead.toLatin1().constData(), H5P_DEFAULT);
-	if(dataset_id < 0)
-		printf("Throw error - H5Dopen2 error %d\n", dataset_id);
+	// Open packet table
+	packettable_id = H5PTopen(file_id, channelToRead.toStdString().c_str());
+	if(packettable_id < 0)
+		printf("Throw error - H5PTopen error %d\n", packettable_id);
 
-	// Get dataset info
-	datatype_id = H5Dget_type(dataset_id);
-	if(datatype_id < 0)
-		printf("Throw error - H5Dget_type %d\n", datatype_id);
+	// Get packet count
+	status = H5PTget_num_packets(packettable_id, &nrecords);
+	if(status < 0)
+		printf("Throw error - H5PTget_num_packets error %d\n", status);
 
-	// Get dataset class
-	class_id = H5Tget_class(datatype_id);
-	if(class_id < 0)
-		printf("Throw error - H5Tget_class %d\n", class_id);
-
-	// Get dataset space in bytes
-	dataspace_id = H5Dget_space(dataset_id);
-	if(dataspace_id < 0)
-		printf("Throw error - H5Dget_space error %d\n", dataspace_id);
-
-	// Get rank of dataspace
-	rank = H5Sget_simple_extent_ndims(dataspace_id);
-	if(rank < 0)
-		printf("Throw error - H5Sget_simple_extent_ndims error %d\n", rank);
-
-	// Get dimensions of data
-	// If the second dimension is zero, then the dataset is a scalar
-	dim_status = H5Sget_simple_extent_dims(dataspace_id, dims, NULL);
-	if(dim_status < 0)
-		printf("Throw error - H5Sget_simple_extent_dims error %d\n", dim_status);
-
-	// Define memory dataspace
-	memspace_id = H5Screate_simple(rank, dims, NULL);
-	if(memspace_id < 0)
-		printf("Throw error - H5Screate_simple error %d\n", memspace_id);
+	// Initialize data buffer 
+	// TODO: Initialize using nrecords*numChannels
+	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords));
 
 	// Print for debug
-	printf("dataset_id: %d\n" "datatype_id: %d\n" "dataspace_id: %d\n" "memspace_id: %d\n" "rank: %d\n" "dimensions: %lu x %lu \n\n",
-			dataset_id, datatype_id, dataspace_id, memspace_id, rank, (unsigned long)(dims[0]), (unsigned long)(dims[1]));
-
-	// Initialize data buffer using rank  (which will always be 1, no matter how many channels)
-	if(rank == 1)
-		data_buffer = (double *)malloc(sizeof(double)*dims[0]);
-	else if(rank == 2)
-		data_buffer = (double *)malloc(sizeof(double)*dims[0]*dims[1]);
+	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
+	//	(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
 	// Read data
-	status = H5Dread(dataset_id, datatype_id, memspace_id, dataspace_id, H5P_DEFAULT, data_buffer);
+	status = H5PTread_packets(packettable_id, 0, (int)nrecords/2, data_buffer);
 	if(status < 0)
 		printf("Throw error - H5Dread error %d\n", status);
 
 	// Temporarily use print to check if data is really there
-	dump_vals(data_buffer, rank, dims);
+	dump_vals(data_buffer, dims);
 
 	// The rest is easier
 	// TO-DO: read time duration and period, build time vector for plotting
@@ -446,20 +417,13 @@ void AnalysisTools::plotTrial() {
 	// TO-DO: plot selected trial and channel
 
 	// Close everything
-	H5Dclose(dataset_id);
-	H5Tclose(datatype_id);
-	H5Sclose(memspace_id);
-	H5Sclose(dataspace_id);
+	H5PTclose(packettable_id);
 }
 
 // Temporary function for validating data access
-void AnalysisTools::dump_vals(double *data, int rank, hsize_t *ndims)
+void AnalysisTools::dump_vals(double *data, hsize_t *ndims)
 {
 	// Only printing first value out or else the printf will block
-	for(size_t i=0; i<1; i++)
-		if(ndims[1] == 0)
-			printf("value is %f\n", data[i]);
-		else
-			for(size_t j=0; j<ndims[1]; j++)
-				printf("value is %f\n", data[i*ndims[1]+j]);
+	for(size_t i=0; i<100; i++)
+		printf("value is %f\n", data[i]);
 }
