@@ -45,7 +45,7 @@ QTreeWidgetItem *treeChild2;
 QString currentTrial;
 int currentTrialFlag;
 int firstChannelSelected;
-double *data_buffer;
+double *data_buffer, *time_buffer, *period_buffer;
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
@@ -358,6 +358,10 @@ void AnalysisTools::closeFile()
 		H5Fclose(file_id);
 	if(data_buffer)
 		free(data_buffer);
+	if(time_buffer)
+		free(time_buffer);
+	if(period_buffer)
+		free(period_buffer);
 }
 
 // TO-DO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
@@ -368,7 +372,7 @@ void AnalysisTools::plotTrial() {
 	//        only plot if check boxes are selected
 	herr_t status;
 	hsize_t dims[2], nrecords, ntrials, nchannels;
-	hid_t packettable_id, trial_id;
+	hid_t packettable_id, trial_id, period_id;
 	int dim_status;
 
 	// Get elements from GUI
@@ -376,6 +380,8 @@ void AnalysisTools::plotTrial() {
 	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
 	QString trialToRead = treeViewer->currentItem()->parent()->text(0);
 	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
+	QString periodToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/Period (ns)";
+	QString trialLengthToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/Trial Length (ns)";
 
 	// Open packet table
 	packettable_id = H5PTopen(file_id, channelToRead.toLatin1().constData());
@@ -407,6 +413,8 @@ void AnalysisTools::plotTrial() {
 
 	// Initialize data buffer 
 	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
+	time_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
+	period_buffer = (double *)malloc(sizeof(double));
 
 	// Print for debug
 	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
@@ -417,14 +425,22 @@ void AnalysisTools::plotTrial() {
 	if(status < 0)
 		printf("Throw error - H5PTread_packets error %d\n", status);
 
-	// The rest is easier
-	// TO-DO: read time duration and period, build time vector for plotting
-
-	// TO-DO: plot selected trial and channel
-	// need to build time vector
+	// Build time vector
+	period_id = H5Dopen2(file_id, periodToRead.toLatin1().constData(), H5P_DEFAULT);
+	if(period_id < 0)
+		printf("Throw error - H5Dopen2 error %d\n", period_id);
+	status = H5Dread(period_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, period_buffer);
+	if(status < 0)
+		printf("Throw error - H5Dread error %d\n", status);
+	time_buffer[0] = 0;
+	for (int i = 1; i < (int)nrecords; i++) {
+		time_buffer[i] = time_buffer[i-1] + (*period_buffer / 1e9);
+	}
+	
+	// Plot
 	QwtPlotCurve *tscurve = new QwtPlotCurve;
 	tscurve->attach(tsplot);
-	tscurve->setRawSamples(data_buffer, data_buffer, (int)nrecords);
+	tscurve->setRawSamples(time_buffer, data_buffer, (int)nrecords);
 
 	// Refresh enabled plots
 	tsplot->replot();
@@ -432,6 +448,7 @@ void AnalysisTools::plotTrial() {
 	// Close identifiers
 	H5PTclose(packettable_id);
 	H5Gclose(trial_id);
+	H5Dclose(period_id);
 }
 
 // Temporary function for validating data access
