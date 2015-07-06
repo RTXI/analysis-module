@@ -57,6 +57,7 @@ static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
 	setWhatsThis(
 			"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TO-DO: add detail here
+	initParameters();
 	DefaultGUIModel::createGUI(vars, num_vars); // this is required to create the GUI
 	customizeGUI();
 	update(INIT);
@@ -66,8 +67,22 @@ AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, 
 
 AnalysisTools::~AnalysisTools(void)
 {
-	H5Fclose(file_id);
-	free(data_buffer);
+	if(file_id) {
+		H5Fclose(file_id);
+		file_id = NULL;
+	}
+	if(data_buffer) {
+		free(data_buffer);
+		data_buffer = NULL;
+	}
+	if(time_buffer) {
+		free(time_buffer);
+		time_buffer = NULL;
+	}
+	if(period_buffer) {
+		free(period_buffer);
+		period_buffer = NULL;
+	}
 }
 
 void AnalysisTools::execute(void) {
@@ -90,6 +105,11 @@ void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 			break;
 	}
 };
+
+void AnalysisTools::initParameters() {
+	file_id = NULL;
+	dataset_id = NULL;
+}
 
 void AnalysisTools::customizeGUI(void) {
 	QGridLayout *customlayout = DefaultGUIModel::getLayout(); 
@@ -262,6 +282,8 @@ void AnalysisTools::changeDataFile(void) {
 	QStringList files;
 	QString filename;
 	if(fileDialog.exec()) {
+		closeFile(); // close previous file
+		treeViewer->clear();
 		files = fileDialog.selectedFiles();
 		filename = files[0];
 		fileNameEdit->setText(filename);
@@ -287,6 +309,28 @@ int AnalysisTools::openFile(QString &filename) {
 			closeFile();
 	}
 	return status;
+}
+
+// TO-DO: erase HDF5, attribute, and parameter viewer contents
+//        disable plot button and any scatter/FFT specific options
+void AnalysisTools::closeFile()
+{
+	if(file_id) {
+		H5Fclose(file_id);
+		file_id = NULL;
+	}
+	if(data_buffer) {
+		free(data_buffer);
+		data_buffer = NULL;
+	}
+	if(time_buffer) {
+		free(time_buffer);
+		time_buffer = NULL;
+	}
+	if(period_buffer) {
+		free(period_buffer);
+		period_buffer = NULL;
+	}
 }
 
 // TO-DO: clean up treeViewer -- no need to list full path for each parent/child
@@ -350,30 +394,27 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 	return 0;
 }
 
-// TO-DO: erase HDF5, attribute, and parameter viewer contents
-//        disable plot button and any scatter/FFT specific options
-void AnalysisTools::closeFile()
-{
-	if(file_id)
-		H5Fclose(file_id);
-	if(data_buffer)
-		free(data_buffer);
-	if(time_buffer)
-		free(time_buffer);
-	if(period_buffer)
-		free(period_buffer);
-}
-
 // TO-DO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
 void AnalysisTools::plotTrial() {
 	// TO-DO: check that current item is a dataset (and not a group), only open/plot if a dataset is selected (maybe display an warning otherwise?)
-	//        need to open appropriate column in Channel Data, not the header dataset
-	//        plot using QWT and setData/setSamples -- look into their assocated warnings
-	//        only plot if check boxes are selected
 	herr_t status;
 	hsize_t dims[2], nrecords, ntrials, nchannels;
 	hid_t packettable_id, trial_id, period_id;
 	int dim_status;
+	
+	// Reset data buffers if something is already plotted
+	if(data_buffer) {
+		free(data_buffer);
+		data_buffer = NULL;
+	}
+	if(time_buffer) {
+		free(time_buffer);
+		time_buffer = NULL;
+	}
+	if(period_buffer) {
+		free(period_buffer);
+		period_buffer = NULL;
+	}
 
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
@@ -411,7 +452,7 @@ void AnalysisTools::plotTrial() {
 		printf("Throw error - H5Gget_num_objs %d\n", status);
 	nchannels--;
 
-	// Initialize data buffer 
+	// Initialize data buffer
 	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
 	time_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
 	period_buffer = (double *)malloc(sizeof(double));
@@ -438,7 +479,7 @@ void AnalysisTools::plotTrial() {
 	}
 	
 	// Plot
-	QwtPlotCurve *tscurve = new QwtPlotCurve;
+	tscurve = new QwtPlotCurve;
 	tscurve->attach(tsplot);
 	tscurve->setRawSamples(time_buffer, data_buffer, (int)nrecords);
 

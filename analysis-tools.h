@@ -52,14 +52,16 @@ class AnalysisTools : public DefaultGUIModel {
 		
 		// GUI components
 		BasicPlot *tsplot;
+		QwtPlotCurve *tscurve;
 		ScatterPlot *splot;
 		BasicPlot *fftplot;
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton;
 
 		// custom functions
+		void initParameters(void);
 		int openFile(QString &filename);
-		void closeFile();
+		void closeFile(void);
 		void dump_vals(double *, hsize_t*);
 
 	private slots:
