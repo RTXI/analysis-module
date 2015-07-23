@@ -30,9 +30,6 @@
 
 #include <time.h>
 #include <gsl/gsl_math.h>
-#include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics/stats.hpp>
-#include <boost/accumulators/statistics/mean.hpp>
 
 #include <iostream>
 
@@ -442,6 +439,12 @@ void AnalysisTools::plotTrial() {
 	double channelDataSum = 0;
 	double channelDataMean;
 	
+	// Check if selected channel is actually a channel (should have 0 children in the treeViewer)
+	if (treeViewer->currentItem()->childCount() != 0) {
+		printf("plotTrial error: selected channel is not a dataset\n");
+		return;
+	}
+	
 	// Reset data buffers if something is already plotted
 	if(data_buffer) {
 		free(data_buffer);
@@ -506,17 +509,15 @@ void AnalysisTools::plotTrial() {
 	period_buffer = (double *)malloc(sizeof(double));
 
 	// Print for debug
-	printf("channel to read (string): %s\n", channelNum.toStdString().c_str());
-	printf("channel to read (int): %d\n\n", channelNumInt);
-	printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
-			(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
+	//printf("channel to read (string): %s\n", channelNum.toStdString().c_str());
+	//printf("channel to read (int): %d\n\n", channelNumInt);
+	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
+	//		(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
 	// Read data
 	status = H5PTread_packets(packettable_id, 0, (int)nrecords, data_buffer);
 	if(status < 0)
 		printf("Throw error - H5PTread_packets error %d\n", status);
-
-	dump_vals(data_buffer, NULL);
 
 	// Build channel_data array -- pretty messy but seems unavoidable with the current Data Recorder structure
 	// To eliminate a loop later on, find channelDataSum here if full wave rectification option is checked
@@ -536,8 +537,6 @@ void AnalysisTools::plotTrial() {
 			j++;
 		}
 	}
-	
-	dump_vals(channel_data, NULL);
 
 	// Build time vector
 	period_id = H5Dopen2(file_id, periodToRead.toLatin1().constData(), H5P_DEFAULT);
@@ -557,7 +556,6 @@ void AnalysisTools::plotTrial() {
 		for (int i = 0; i < (int)nrecords; i++) {
 			channel_data[i] = std::abs(channel_data[i] - channelDataMean);
 		}
-		dump_vals(channel_data, NULL);
 	}
 	
 	// Plot
