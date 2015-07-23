@@ -45,7 +45,7 @@ QTreeWidget *treeViewer;
 QTreeWidgetItem *treeParent;
 QTreeWidgetItem *treeChild1;
 QTreeWidgetItem *treeChild2;
-QString currentTrial;
+QString currentTrial, currentGroup;
 int currentTrialFlag;
 int firstChannelSelected;
 double *data_buffer, *channel_data, *time_buffer, *period_buffer;
@@ -387,12 +387,14 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 					treeViewer->addTopLevelItem(treeParent);
 				} else if (qName.startsWith(currentTrial) && qName.endsWith("Asynchronous Data")) {
 					treeChild1 = new QTreeWidgetItem;
-					treeChild1->setText(0, qName);
+					currentGroup = "Asynchronous Data";
+					treeChild1->setText(0, "Asynchronous Data");
 					treeParent->addChild(treeChild1);
 				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
 					currentTrialFlag = 0; // reset flag to start parsing next trial
 					treeChild1 = new QTreeWidgetItem;
-					treeChild1->setText(0, qName);
+					currentGroup = "Synchronous Data";
+					treeChild1->setText(0, "Synchronous Data");
 					treeParent->addChild(treeChild1);
 				}
 				break;
@@ -400,7 +402,7 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 				//printf ("%s  (Dataset)\n", name);
 				if (qName.startsWith(currentTrial + "/Asynchronous Data") && !qName.endsWith("Channel Data")) {
 					treeChild2 = new QTreeWidgetItem;
-					treeChild2->setText(0, qName);
+					treeChild2->setText(0, qName.right(qName.length() - (currentTrial.length()+currentGroup.length()+2)));
 					treeChild1->addChild(treeChild2);
 					treeChild2->setToolTip(0, qName);
 					if (!firstChannelSelected) {
@@ -409,7 +411,7 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 					}
 				} else if (qName.startsWith(currentTrial + "/Synchronous Data") && !qName.endsWith("Channel Data")) {
 					treeChild2 = new QTreeWidgetItem;
-					treeChild2->setText(0, qName);
+					treeChild2->setText(0, qName.right(qName.length() - (currentTrial.length()+currentGroup.length()+2)));
 					treeChild1->addChild(treeChild2);
 					treeChild2->setToolTip(0, qName);
 					if (!firstChannelSelected) {
@@ -460,10 +462,12 @@ void AnalysisTools::plotTrial() {
 
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
-	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
+	QString channelNum = selectedTrial.at(0);
 	int channelNumInt = channelNum.toInt();
-	QString trialToRead = treeViewer->currentItem()->parent()->text(0);
-	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
+	QString trialToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/" +
+			treeViewer->currentItem()->parent()->text(0);
+	QString channelToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/" +
+			treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
 	QString periodToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/Period (ns)";
 	QString trialLengthToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/Trial Length (ns)";
 
