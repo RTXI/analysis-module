@@ -44,7 +44,8 @@ class AnalysisTools : public DefaultGUIModel {
 		virtual void update(DefaultGUIModel::update_flags_t);
 
 	private:
-		// inputs, states, calculated values
+		// inputs, states, flags, calculated values
+		bool fwrChecked;
 		
 		// File I/O
 		hid_t file_id;
@@ -70,6 +71,7 @@ class AnalysisTools : public DefaultGUIModel {
 		void screenshotScatter(void);
 		void screenshotFFT(void);
 		void clearData(void);
+		void toggleFWR(bool);
 		void changeDataFile(void);
 };
 

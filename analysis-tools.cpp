@@ -30,6 +30,9 @@
 
 #include <time.h>
 #include <gsl/gsl_math.h>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
 
 #include <iostream>
 
@@ -45,7 +48,7 @@ QTreeWidgetItem *treeChild2;
 QString currentTrial;
 int currentTrialFlag;
 int firstChannelSelected;
-double *data_buffer, *time_buffer, *period_buffer;
+double *data_buffer, *channel_data, *time_buffer, *period_buffer;
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
@@ -74,6 +77,10 @@ AnalysisTools::~AnalysisTools(void)
 	if(data_buffer) {
 		free(data_buffer);
 		data_buffer = NULL;
+	}
+	if(channel_data) {
+		free(channel_data);
+		channel_data = NULL;
 	}
 	if(time_buffer) {
 		free(time_buffer);
@@ -107,7 +114,12 @@ void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 };
 
 void AnalysisTools::initParameters() {
+	fwrChecked = 0;
 	file_id = NULL;
+	data_buffer = NULL;
+	channel_data = NULL;
+	time_buffer = NULL;
+	period_buffer = NULL;
 	dataset_id = NULL;
 }
 
@@ -138,6 +150,8 @@ void AnalysisTools::customizeGUI(void) {
 	tsplot->setFixedSize(450, 270);
 	tsplotBoxLayout->addWidget(tsplot);
 	customlayout->addWidget(tsplotBox, 1, 2, 3, 2);
+	tscurve = new QwtPlotCurve;
+	tscurve->attach(tsplot);
 
 	QGroupBox *scatterplotBox = new QGroupBox("Scatter Plot");
 	QHBoxLayout *scatterplotBoxLayout = new QHBoxLayout;
@@ -160,6 +174,23 @@ void AnalysisTools::customizeGUI(void) {
 	QObject::connect(saveScatterPlotButton, SIGNAL(clicked()), this, SLOT(screenshotScatter()));
 	QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
 
+	// Plot options
+	QGroupBox *plotOptionsBox = new QGroupBox(tr("Plot Options"));
+	// TO-DO: add detail here (later)
+	QGridLayout *plotOptionsBoxLayout = new QGridLayout;
+	plotOptionsBox->setLayout(plotOptionsBoxLayout);
+	QVBoxLayout *plotOptionsVerticalLayout = new QVBoxLayout;
+	QButtonGroup *plotOptionsButtons = new QButtonGroup;
+	plotOptionsButtons->setExclusive(false);
+	QCheckBox *FWRCheckBox = new QCheckBox("Full wave rectify");
+	plotOptionsVerticalLayout->addWidget(FWRCheckBox);
+	plotOptionsButtons->addButton(FWRCheckBox);
+	FWRCheckBox->setChecked(false);
+	QObject::connect(FWRCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFWR(bool)));
+	FWRCheckBox->setToolTip("Enable full wave rectification of time series plot");
+	plotOptionsBoxLayout->addLayout(plotOptionsVerticalLayout, 0, 0);
+	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
+
 	// Global plot options
 	QGroupBox *optionBox = new QGroupBox;
 	QGridLayout *optionBoxLayout = new QGridLayout;
@@ -179,8 +210,10 @@ void AnalysisTools::customizeGUI(void) {
 	plotSelectionLayout->addWidget(plotFFTCheckBox);
 	optionButtons->addButton(plotFFTCheckBox);
 	plotFFTCheckBox->setChecked(true);
+	// TO-DO: add toggles for all related plot options
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setEnabled(bool)));
 	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),saveTSPlotButton,SLOT(setEnabled(bool)));
+	QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),FWRCheckBox,SLOT(setEnabled(bool)));
 	//QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),splot,SLOT(setEnabled(bool)));
 	QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),saveScatterPlotButton,SLOT(setEnabled(bool)));
@@ -201,11 +234,6 @@ void AnalysisTools::customizeGUI(void) {
 	plotButton->setToolTip("Plot data for selected trial and channel");
 	optionBoxLayout->addLayout(plotButtonLayout, 1, 0);
 	customlayout->addWidget(optionBox, 1, 0, 1, 1);
-
-	// Scatter/FFT plot options
-	QGroupBox *plotOptionsBox = new QGroupBox(tr("Scatter/FFT Plot Options"));
-	// TO-DO: add detail here (later)
-	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
 
 	// File control
 	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
@@ -261,6 +289,10 @@ void AnalysisTools::screenshotFFT() {
 }
 
 void AnalysisTools::clearData() {
+}
+
+void AnalysisTools::toggleFWR(bool fwrStatus) {
+	fwrChecked = fwrStatus;
 }
 
 // TO-DO: may need to restore toggle functions to allow plots to be cleared when deselected
@@ -322,6 +354,10 @@ void AnalysisTools::closeFile()
 	if(data_buffer) {
 		free(data_buffer);
 		data_buffer = NULL;
+	}
+	if(channel_data) {
+		free(channel_data);
+		channel_data = NULL;
 	}
 	if(time_buffer) {
 		free(time_buffer);
@@ -401,11 +437,17 @@ void AnalysisTools::plotTrial() {
 	hsize_t dims[2], nrecords, ntrials, nchannels;
 	hid_t packettable_id, trial_id, period_id;
 	int dim_status;
+	double channelDataSum = 0;
+	double channelDataMean;
 	
 	// Reset data buffers if something is already plotted
 	if(data_buffer) {
 		free(data_buffer);
 		data_buffer = NULL;
+	}
+	if(channel_data) {
+		free(channel_data);
+		channel_data = NULL;
 	}
 	if(time_buffer) {
 		free(time_buffer);
@@ -419,6 +461,7 @@ void AnalysisTools::plotTrial() {
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
 	QString channelNum = selectedTrial.at(selectedTrial.size()-1);
+	int channelNumInt = channelNum.toInt();
 	QString trialToRead = treeViewer->currentItem()->parent()->text(0);
 	QString channelToRead = treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
 	QString periodToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/Period (ns)";
@@ -452,19 +495,45 @@ void AnalysisTools::plotTrial() {
 		printf("Throw error - H5Gget_num_objs %d\n", status);
 	nchannels--;
 
-	// Initialize data buffer
+	// Initialize data buffer -- module will crash for large trials...
 	data_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
-	time_buffer = (double *)malloc(sizeof(double)*(int)(nrecords)*(int)nchannels);
+	channel_data = (double *)malloc(sizeof(double)*(int)(nrecords));
+	time_buffer = (double *)malloc(sizeof(double)*(int)(nrecords));
 	period_buffer = (double *)malloc(sizeof(double));
 
 	// Print for debug
-	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
-			//(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
+	printf("channel to read (string): %s\n", channelNum.toStdString().c_str());
+	printf("channel to read (int): %d\n\n", channelNumInt);
+	printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
+			(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
 	// Read data
 	status = H5PTread_packets(packettable_id, 0, (int)nrecords, data_buffer);
 	if(status < 0)
 		printf("Throw error - H5PTread_packets error %d\n", status);
+
+	dump_vals(data_buffer, NULL);
+
+	// Build channel_data array -- pretty messy but seems unavoidable with the current Data Recorder structure
+	// To eliminate a loop later on, find channelDataSum here if full wave rectification option is checked
+	if (fwrChecked) {
+		int j = 0;
+		for (int i = channelNumInt-1; i < (int)nrecords*(int)nchannels; i = i + (int)nchannels) {
+			channel_data[j] = data_buffer[i];
+			channelDataSum = channelDataSum + channel_data[j];
+			j++;
+		}
+		// find DC offset -- for long signals, it's approx. the mean
+		channelDataMean = channelDataSum / ((int)nrecords);
+	} else {
+		int j = 0;
+		for (int i = channelNumInt-1; i < (int)nrecords*(int)nchannels; i = i + nchannels) {
+			channel_data[j] = data_buffer[i];
+			j++;
+		}
+	}
+	
+	dump_vals(channel_data, NULL);
 
 	// Build time vector
 	period_id = H5Dopen2(file_id, periodToRead.toLatin1().constData(), H5P_DEFAULT);
@@ -478,12 +547,20 @@ void AnalysisTools::plotTrial() {
 		time_buffer[i] = time_buffer[i-1] + (*period_buffer / 1e9);
 	}
 	
+	// Full wave rectification
+	if (fwrChecked) {
+		// subtract DC offset from each value and take absolute value
+		for (int i = 0; i < (int)nrecords; i++) {
+			channel_data[i] = std::abs(channel_data[i] - channelDataMean);
+		}
+		dump_vals(channel_data, NULL);
+	}
+	
 	// Plot
-	tscurve = new QwtPlotCurve;
-	tscurve->attach(tsplot);
-	tscurve->setRawSamples(time_buffer, data_buffer, (int)nrecords);
-
-	// Refresh enabled plots
+	tscurve->setRawSamples(time_buffer, channel_data, (int)nrecords);
+	// Refresh enabled plots (turn autoscaling on in case the zoom feature was used)
+	tsplot->setAxisAutoScale(tsplot->yLeft, true);
+	tsplot->setAxisAutoScale(tsplot->xBottom, true);
 	tsplot->replot();
 
 	// Close identifiers
