@@ -9,6 +9,13 @@ HEADERS = analysis-tools.h\
           $(RTXI_INCLUDES)/scrollzoomer.h\
 		  $(RTXI_INCLUDES)/runningstat.h\
 		  $(RTXI_INCLUDES)/scrollbar.h\
+		  $(RTXI_INCLUDES)/DSP/gen_win.h\
+		  $(RTXI_INCLUDES)/DSP/rectnglr.h\
+		  $(RTXI_INCLUDES)/DSP/trianglr.h\
+		  $(RTXI_INCLUDES)/DSP/hamming.h\
+		  $(RTXI_INCLUDES)/DSP/hann.h\
+		  $(RTXI_INCLUDES)/DSP/dolph.h\
+		  $(RTXI_INCLUDES)/DSP/kaiser.h\
 
 SOURCES = analysis-tools.cpp\
 		  moc_analysis-tools.cpp\

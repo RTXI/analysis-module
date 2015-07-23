@@ -179,13 +179,25 @@ void AnalysisTools::customizeGUI(void) {
 	QVBoxLayout *plotOptionsVerticalLayout = new QVBoxLayout;
 	QButtonGroup *plotOptionsButtons = new QButtonGroup;
 	plotOptionsButtons->setExclusive(false);
-	QCheckBox *FWRCheckBox = new QCheckBox("Full wave rectify");
+	QCheckBox *FWRCheckBox = new QCheckBox("TS: Full wave rectify");
 	plotOptionsVerticalLayout->addWidget(FWRCheckBox);
 	plotOptionsButtons->addButton(FWRCheckBox);
 	FWRCheckBox->setChecked(false);
 	QObject::connect(FWRCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFWR(bool)));
 	FWRCheckBox->setToolTip("Enable full wave rectification of time series plot");
 	plotOptionsBoxLayout->addLayout(plotOptionsVerticalLayout, 0, 0);
+	QLabel *windowLabel = new QLabel("FFT window shape:");
+	windowShape = new QComboBox;
+	windowShape->insertItem(1, "Rectangular");
+	windowShape->insertItem(2, "Triangular (Bartlett)");
+	windowShape->insertItem(3, "Hamming");
+	windowShape->insertItem(4, "Hann");
+	windowShape->insertItem(5, "Chebyshev");
+	windowShape->insertItem(6, "Kaiser");
+	QObject::connect(windowShape,SIGNAL(activated(int)), this, SLOT(updateWindow(int)));
+	windowShape->setToolTip("Choose a window to apply for the FFT plot. For no window, choose Rectangular.");
+	plotOptionsBoxLayout->addWidget(windowLabel, 1, 0);
+	plotOptionsBoxLayout->addWidget(windowShape, 1, 1);
 	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
 
 	// Global plot options
@@ -268,6 +280,45 @@ void AnalysisTools::customizeGUI(void) {
 	DefaultGUIModel::unloadButton->setToolTip("Close module");
 
 	setLayout(customlayout);
+}
+
+void AnalysisTools::updateWindow(int index) {
+	if (index == 0) {
+		window_shape = RECT;
+	} else if (index == 1) {
+		window_shape = TRI;
+	} else if (index == 2) {
+		window_shape = HAMM;
+	} else if (index == 3) {
+		window_shape = HANN;
+	} else if (index == 4) {
+		window_shape = CHEBY;
+	} else if (index == 5) {
+		window_shape = KAISER;
+	}
+}
+
+void AnalysisTools::makeWindow(int num_points) {
+	switch (window_shape) {
+		case RECT: // rectangular
+			disc_window = new RectangularWindow(num_points);
+			break;
+		case TRI: // triangular
+			disc_window = new TriangularWindow(num_points, 1);
+			break;
+		case HAMM: // Hamming
+			disc_window = new HammingWindow(num_points);
+			break;
+		case HANN: // Hann
+			disc_window = new HannWindow(num_points, 1);
+			break;
+		case CHEBY: // Dolph-Chebyshev
+			disc_window = new DolphChebyWindow(num_points, Calpha);
+			break;
+		case KAISER:
+			disc_window = new KaiserWindow(num_points, Kalpha);
+			break;
+	} // end of switch on window_shape
 }
 
 void AnalysisTools::screenshotTS() {

@@ -20,6 +20,14 @@
 #include <QMessageBox>
 #include <QFileInfo>
 
+#include <DSP/gen_win.h>
+#include <DSP/rectnglr.h>
+#include <DSP/trianglr.h>
+#include <DSP/hamming.h>
+#include <DSP/hann.h>
+#include <DSP/dolph.h>
+#include <DSP/kaiser.h>
+
 #include <qwt_plot_curve.h>
 #include <default_gui_model.h>
 #include <hdf5.h>
@@ -35,6 +43,10 @@ class AnalysisTools : public DefaultGUIModel {
 		virtual ~AnalysisTools(void);
 		void execute(void);
 		void customizeGUI(void);
+		
+		enum window_t	{
+			RECT=0, TRI, HAMM, HANN, CHEBY, KAISER
+		};
 
 	public slots:
 
@@ -46,6 +58,10 @@ class AnalysisTools : public DefaultGUIModel {
 	private:
 		// inputs, states, flags, calculated values
 		bool fwrChecked;
+		GenericWindow *disc_window;
+		window_t window_shape;
+		double Kalpha; // Kaiser window sidelobe attenuation parameter
+		double Calpha; // Chebyshev window sidelobe attenuation parameter
 		
 		// File I/O
 		hid_t file_id;
@@ -58,12 +74,14 @@ class AnalysisTools : public DefaultGUIModel {
 		BasicPlot *fftplot;
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton;
+		QComboBox *windowShape;
 
 		// custom functions
 		void initParameters(void);
 		int openFile(QString &filename);
 		void closeFile(void);
 		void dump_vals(double *, hsize_t*);
+		void makeWindow(int);
 
 	private slots:
 		void plotTrial(void);
@@ -73,6 +91,7 @@ class AnalysisTools : public DefaultGUIModel {
 		void clearData(void);
 		void toggleFWR(bool);
 		void changeDataFile(void);
+		void updateWindow(int);
 };
 
 herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);
