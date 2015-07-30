@@ -75,6 +75,7 @@ class AnalysisTools : public DefaultGUIModel {
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton;
 		QComboBox *windowShape;
+		QTextEdit *parameterView;
 
 		// custom functions
 		void initParameters(void);
@@ -92,6 +93,8 @@ class AnalysisTools : public DefaultGUIModel {
 		void toggleFWR(bool);
 		void changeDataFile(void);
 		void updateWindow(int);
+		void updateKalpha(double);
+		void updateCalpha(double);
 };
 
 herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);

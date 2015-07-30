@@ -118,6 +118,9 @@ void AnalysisTools::initParameters() {
 	time_buffer = NULL;
 	period_buffer = NULL;
 	dataset_id = NULL;
+	
+	Kalpha = 1.5;
+	Calpha = 70;
 }
 
 void AnalysisTools::customizeGUI(void) {
@@ -162,9 +165,9 @@ void AnalysisTools::customizeGUI(void) {
 	QHBoxLayout *fftplotBoxLayout = new QHBoxLayout;
 	fftplotBox->setLayout(fftplotBoxLayout);
 	fftplot = new BasicPlot(this);
-	fftplot->setFixedSize(450, 270);
+	fftplot->setFixedSize(675, 270);
 	fftplotBoxLayout->addWidget(fftplot);
-	customlayout->addWidget(fftplotBox, 4, 4, 3, 2);
+	customlayout->addWidget(fftplotBox, 4, 3, 3, 3);
 
 	// Connect screenshot buttons to functions
 	QObject::connect(saveTSPlotButton, SIGNAL(clicked()), this, SLOT(screenshotTS()));
@@ -173,7 +176,6 @@ void AnalysisTools::customizeGUI(void) {
 
 	// Plot options
 	QGroupBox *plotOptionsBox = new QGroupBox(tr("Plot Options"));
-	// TO-DO: add detail here (later)
 	QGridLayout *plotOptionsBoxLayout = new QGridLayout;
 	plotOptionsBox->setLayout(plotOptionsBoxLayout);
 	QVBoxLayout *plotOptionsVerticalLayout = new QVBoxLayout;
@@ -183,7 +185,7 @@ void AnalysisTools::customizeGUI(void) {
 	plotOptionsVerticalLayout->addWidget(FWRCheckBox);
 	plotOptionsButtons->addButton(FWRCheckBox);
 	FWRCheckBox->setChecked(false);
-	QObject::connect(FWRCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFWR(bool)));
+	QObject::connect(FWRCheckBox, SIGNAL(toggled(bool)),this,SLOT(toggleFWR(bool)));
 	FWRCheckBox->setToolTip("Enable full wave rectification of time series plot");
 	plotOptionsBoxLayout->addLayout(plotOptionsVerticalLayout, 0, 0);
 	QLabel *windowLabel = new QLabel("FFT window shape:");
@@ -194,11 +196,25 @@ void AnalysisTools::customizeGUI(void) {
 	windowShape->insertItem(4, "Hann");
 	windowShape->insertItem(5, "Chebyshev");
 	windowShape->insertItem(6, "Kaiser");
-	QObject::connect(windowShape,SIGNAL(activated(int)), this, SLOT(updateWindow(int)));
+	QObject::connect(windowShape, SIGNAL(activated(int)), this, SLOT(updateWindow(int)));
 	windowShape->setToolTip("Choose a window to apply for the FFT plot. For no window, choose Rectangular.");
 	plotOptionsBoxLayout->addWidget(windowLabel, 1, 0);
 	plotOptionsBoxLayout->addWidget(windowShape, 1, 1);
-	customlayout->addWidget(plotOptionsBox, 2, 0, 1, 1);
+	QLabel *kalphaLabel = new QLabel("Kaiser Alpha");
+	plotOptionsBoxLayout->addWidget(kalphaLabel, 2, 0);
+	QDoubleSpinBox *kalphaEdit = new QDoubleSpinBox(plotOptionsBox);
+	kalphaEdit->setValue(Kalpha);
+	QObject::connect(kalphaEdit, SIGNAL(valueChanged(double)), this, SLOT(updateKalpha(double)));
+	kalphaEdit->setToolTip("Attenuation parameter for Kaiser window");
+	plotOptionsBoxLayout->addWidget(kalphaEdit, 2, 1);
+	QLabel *calphaLabel = new QLabel("Chebyshev (dB)");
+	plotOptionsBoxLayout->addWidget(calphaLabel, 3, 0);
+	QDoubleSpinBox *calphaEdit = new QDoubleSpinBox(plotOptionsBox);
+	calphaEdit->setValue(Calpha);
+	QObject::connect(calphaEdit, SIGNAL(valueChanged(double)), this, SLOT(updateCalpha(double)));
+	calphaEdit->setToolTip("Attenuation parameter for Chebyshev window");
+	plotOptionsBoxLayout->addWidget(calphaEdit, 3, 1);
+	customlayout->addWidget(plotOptionsBox, 2, 0, 2, 1);
 
 	// Global plot options
 	QGroupBox *optionBox = new QGroupBox;
@@ -260,19 +276,17 @@ void AnalysisTools::customizeGUI(void) {
 	// HDF5 viewer
 	treeViewer = new QTreeWidget;
 	treeViewer->setHeaderLabels(QStringList("HDF5 Viewer"));
-	customlayout->addWidget(treeViewer, 3, 0, 4, 1);
-
-	// Attributes
-	QGroupBox *attributesBox = new QGroupBox(tr("Attributes"));
-	QHBoxLayout *attributesLayout = new QHBoxLayout;
-	attributesBox->setLayout(attributesLayout);
-	customlayout->addWidget(attributesBox, 4, 2, 3, 1);
+	customlayout->addWidget(treeViewer, 4, 0, 3, 1);
 
 	// Parameters
 	QGroupBox *paramsBox = new QGroupBox(tr("Parameters"));
 	QHBoxLayout *paramsLayout = new QHBoxLayout;
 	paramsBox->setLayout(paramsLayout);
-	customlayout->addWidget(paramsBox, 4, 3, 3, 1);
+	parameterView = new QTextEdit;
+	parameterView->setFixedWidth(220);
+	paramsLayout->addWidget(parameterView);
+	paramsBox->setMaximumSize(250, 500);
+	customlayout->addWidget(paramsBox, 4, 2, 3, 1);
 
 	// Standard module buttons
 	DefaultGUIModel::pauseButton->setEnabled(false);
@@ -296,6 +310,14 @@ void AnalysisTools::updateWindow(int index) {
 	} else if (index == 5) {
 		window_shape = KAISER;
 	}
+}
+
+void AnalysisTools::updateKalpha(double KalphaInput) {
+	Kalpha = KalphaInput;
+}
+
+void AnalysisTools::updateCalpha(double CalphaInput) {
+	Calpha = CalphaInput;
 }
 
 void AnalysisTools::makeWindow(int num_points) {
@@ -467,6 +489,7 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 						treeViewer->setCurrentItem(treeChild2);
 					}
 				}
+				// else statement -- add all remaining dataset contents to parameters
 				break;
 			case H5O_TYPE_NAMED_DATATYPE:
 				//printf ("%s  (Datatype)\n", name);
@@ -615,6 +638,10 @@ void AnalysisTools::plotTrial() {
 	tsplot->setAxisAutoScale(tsplot->yLeft, true);
 	tsplot->setAxisAutoScale(tsplot->xBottom, true);
 	tsplot->replot();
+
+	// FFT plot
+	// TO-DO: check parameters CAlpha, KAlpha, and FFT window to see if they've changed
+
 
 	// Close identifiers
 	H5PTclose(packettable_id);
