@@ -45,7 +45,8 @@ QTreeWidgetItem *treeChild2;
 QString currentTrial, currentGroup;
 int currentTrialFlag;
 int firstChannelSelected;
-double *data_buffer, *channel_data, *time_buffer, *period_buffer;
+double *data_buffer, *channel_data, *time_buffer, *period_buffer, *fft_output_y, *fft_output_x;
+complex *fft_input, *fft_buffer;
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
@@ -71,22 +72,7 @@ AnalysisTools::~AnalysisTools(void)
 		H5Fclose(file_id);
 		file_id = NULL;
 	}
-	if(data_buffer) {
-		free(data_buffer);
-		data_buffer = NULL;
-	}
-	if(channel_data) {
-		free(channel_data);
-		channel_data = NULL;
-	}
-	if(time_buffer) {
-		free(time_buffer);
-		time_buffer = NULL;
-	}
-	if(period_buffer) {
-		free(period_buffer);
-		period_buffer = NULL;
-	}
+	freePlotBuffers();
 }
 
 void AnalysisTools::execute(void) {
@@ -119,6 +105,7 @@ void AnalysisTools::initParameters() {
 	period_buffer = NULL;
 	dataset_id = NULL;
 	
+	window_shape = RECT;
 	Kalpha = 1.5;
 	Calpha = 70;
 }
@@ -168,6 +155,8 @@ void AnalysisTools::customizeGUI(void) {
 	fftplot->setFixedSize(675, 270);
 	fftplotBoxLayout->addWidget(fftplot);
 	customlayout->addWidget(fftplotBox, 4, 3, 3, 3);
+	fftcurve = new QwtPlotCurve;
+	fftcurve->attach(fftplot);
 
 	// Connect screenshot buttons to functions
 	QObject::connect(saveTSPlotButton, SIGNAL(clicked()), this, SLOT(screenshotTS()));
@@ -421,22 +410,7 @@ void AnalysisTools::closeFile()
 		H5Fclose(file_id);
 		file_id = NULL;
 	}
-	if(data_buffer) {
-		free(data_buffer);
-		data_buffer = NULL;
-	}
-	if(channel_data) {
-		free(channel_data);
-		channel_data = NULL;
-	}
-	if(time_buffer) {
-		free(time_buffer);
-		time_buffer = NULL;
-	}
-	if(period_buffer) {
-		free(period_buffer);
-		period_buffer = NULL;
-	}
+	freePlotBuffers();
 }
 
 // TO-DO: clean up treeViewer -- no need to list full path for each parent/child
@@ -520,22 +494,7 @@ void AnalysisTools::plotTrial() {
 	}
 	
 	// Reset data buffers if something is already plotted
-	if(data_buffer) {
-		free(data_buffer);
-		data_buffer = NULL;
-	}
-	if(channel_data) {
-		free(channel_data);
-		channel_data = NULL;
-	}
-	if(time_buffer) {
-		free(time_buffer);
-		time_buffer = NULL;
-	}
-	if(period_buffer) {
-		free(period_buffer);
-		period_buffer = NULL;
-	}
+	freePlotBuffers();
 
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
@@ -583,8 +542,6 @@ void AnalysisTools::plotTrial() {
 	period_buffer = (double *)malloc(sizeof(double));
 
 	// Print for debug
-	//printf("channel to read (string): %s\n", channelNum.toStdString().c_str());
-	//printf("channel to read (int): %d\n\n", channelNumInt);
 	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
 	//		(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
@@ -624,6 +581,32 @@ void AnalysisTools::plotTrial() {
 		time_buffer[i] = time_buffer[i-1] + (*period_buffer / 1e9);
 	}
 	
+	// FFT plot
+	// TO-DO: check if FFT plot is selected
+	double windowedChannelVal;
+	int fft_length = 2;
+	while (fft_length < (int)nrecords) {
+		fft_length = fft_length * 2;
+	}
+	fft_input = (complex *)malloc(sizeof(complex)*fft_length);
+	fft_buffer = (complex *)malloc(sizeof(complex)*fft_length);
+	fft_output_y = (double *)malloc(sizeof(double)*fft_length);
+	fft_output_x = (double *)malloc(sizeof(double)*fft_length);
+	makeWindow((int)nrecords);
+	for (int i = 0; i < fft_length; i++) {
+		if (i < (int)nrecords) {
+			windowedChannelVal = disc_window->GetDataWinCoeff(i) * channel_data[i];
+			fft_input[i] = complex(windowedChannelVal, 0.0);
+		} else {
+			fft_input[i] = 0; // pad the rest of the array with 0's
+		}
+	}
+	fft(fft_input, fft_buffer, fft_length);
+	for (int i = 0; i < fft_length; i++) {
+		fft_output_y[i] = abs(real(fft_buffer[i]));
+		fft_output_x[i] = i / ((*period_buffer / 1e9) * fft_length);
+	}
+	
 	// Full wave rectification
 	if (fwrChecked) {
 		// subtract DC offset from each value and take absolute value
@@ -634,14 +617,14 @@ void AnalysisTools::plotTrial() {
 	
 	// Plot
 	tscurve->setRawSamples(time_buffer, channel_data, (int)nrecords);
+	fftcurve->setRawSamples(fft_output_x, fft_output_y, fft_length);
 	// Refresh enabled plots (turn autoscaling on in case the zoom feature was used)
 	tsplot->setAxisAutoScale(tsplot->yLeft, true);
 	tsplot->setAxisAutoScale(tsplot->xBottom, true);
 	tsplot->replot();
-
-	// FFT plot
-	// TO-DO: check parameters CAlpha, KAlpha, and FFT window to see if they've changed
-
+	fftplot->setAxisAutoScale(fftplot->yLeft, true);
+	fftplot->setAxisAutoScale(fftplot->xBottom, true);
+	fftplot->replot();
 
 	// Close identifiers
 	H5PTclose(packettable_id);
@@ -655,4 +638,40 @@ void AnalysisTools::dump_vals(double *data, hsize_t *ndims)
 	// Only printing first value out or else the printf will block
 	for(size_t i=0; i<10; i++)
 		printf("value is %f\n", data[i]);
+}
+
+void AnalysisTools::freePlotBuffers()
+{
+	if(data_buffer) {
+		free(data_buffer);
+		data_buffer = NULL;
+	}
+	if(channel_data) {
+		free(channel_data);
+		channel_data = NULL;
+	}
+	if(time_buffer) {
+		free(time_buffer);
+		time_buffer = NULL;
+	}
+	if(period_buffer) {
+		free(period_buffer);
+		period_buffer = NULL;
+	}
+	if(fft_buffer) {
+		free(fft_buffer);
+		fft_buffer = NULL;
+	}
+	if(fft_input) {
+		free(fft_input);
+		fft_input = NULL;
+	}
+	if(fft_output_x) {
+		free(fft_output_x);
+		fft_output_x = NULL;
+	}
+	if(fft_output_y) {
+		free(fft_output_y);
+		fft_output_y = NULL;
+	}
 }

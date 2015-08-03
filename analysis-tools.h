@@ -27,6 +27,7 @@
 #include <DSP/hann.h>
 #include <DSP/dolph.h>
 #include <DSP/kaiser.h>
+#include <DSP/fft.h>
 
 #include <qwt_plot_curve.h>
 #include <default_gui_model.h>
@@ -72,6 +73,7 @@ class AnalysisTools : public DefaultGUIModel {
 		QwtPlotCurve *tscurve;
 		ScatterPlot *splot;
 		BasicPlot *fftplot;
+		QwtPlotCurve *fftcurve;
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton;
 		QComboBox *windowShape;
@@ -83,6 +85,7 @@ class AnalysisTools : public DefaultGUIModel {
 		void closeFile(void);
 		void dump_vals(double *, hsize_t*);
 		void makeWindow(int);
+		void freePlotBuffers(void);
 
 	private slots:
 		void plotTrial(void);

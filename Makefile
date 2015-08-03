@@ -22,6 +22,7 @@ HEADERS = analysis-tools.h\
 		  $(RTXI_INCLUDES)/DSP/cbitrev.h\
 		  $(RTXI_INCLUDES)/DSP/log2.h\
 		  $(RTXI_INCLUDES)/DSP/misdefs.h\
+		  $(RTXI_INCLUDES)/DSP/acosh.h\
 
 SOURCES = analysis-tools.cpp\
 		  moc_analysis-tools.cpp\
@@ -43,6 +44,7 @@ SOURCES = analysis-tools.cpp\
 		  $(RTXI_INCLUDES)/DSP/complex.cpp\
 		  $(RTXI_INCLUDES)/DSP/cbitrev.cpp\
 		  $(RTXI_INCLUDES)/DSP/log2.cpp\
+		  $(RTXI_INCLUDES)/DSP/acosh.cpp\
 		  $(RTXI_INCLUDES)/moc_scatterplot.cpp\
 		  $(RTXI_INCLUDES)/moc_incrementalplot.cpp\
 		  $(RTXI_INCLUDES)/moc_basicplot.cpp\
@@ -61,6 +63,7 @@ SOURCES = analysis-tools.cpp\
 		  $(RTXI_INCLUDES)/DSP/moc_complex.cpp\
 		  $(RTXI_INCLUDES)/DSP/moc_cbitrev.cpp\
 		  $(RTXI_INCLUDES)/DSP/moc_log2.cpp\
+		  $(RTXI_INCLUDES)/DSP/moc_acosh.cpp\
 		  
 			 
 LIBS = -lqwt -lgsl -lhdf5
