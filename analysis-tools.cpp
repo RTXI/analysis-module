@@ -581,7 +581,7 @@ void AnalysisTools::plotTrial() {
 	int fft_length = 2;
 	while (fft_length < (int)nrecords) {
 		fft_length = fft_length * 2;
-	}
+}
 	fft_input = (complex *)malloc(sizeof(complex)*fft_length);
 	fft_buffer = (complex *)malloc(sizeof(complex)*fft_length);
 	fft_output_y = (double *)malloc(sizeof(double)*fft_length);
