@@ -366,9 +366,8 @@ void AnalysisTools::changeDataFile(void) {
 	fileDialog.setDirectory(userprefs.value("/dirs/data", getenv("HOME")).toString());
 
 	QStringList filterList;
-	filterList.push_back("HDF5 files (*.h5)");
-	fileDialog.setFilters(filterList);
-	fileDialog.selectNameFilter("HDF5 files (*.h5)");
+	filterList << "*.h5";
+	fileDialog.setNameFilters(filterList);
 
 	QStringList files;
 	QString filename;
@@ -481,9 +480,8 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 void AnalysisTools::plotTrial() {
 	// TO-DO: check that current item is a dataset (and not a group), only open/plot if a dataset is selected (maybe display an warning otherwise?)
 	herr_t status;
-	hsize_t dims[2], nrecords, ntrials, nchannels;
+	hsize_t nrecords, ntrials, nchannels;
 	hid_t packettable_id, trial_id, period_id;
-	int dim_status;
 	double channelDataSum = 0;
 	double channelDataMean;
 	
@@ -540,10 +538,6 @@ void AnalysisTools::plotTrial() {
 	channel_data = (double *)malloc(sizeof(double)*(int)(nrecords));
 	time_buffer = (double *)malloc(sizeof(double)*(int)(nrecords));
 	period_buffer = (double *)malloc(sizeof(double));
-
-	// Print for debug
-	//printf("dimensions: %lu x %lu\n" "packet count: %d\n\n", 
-	//		(unsigned long)(dims[0]), (unsigned long)(dims[1]), (int)nrecords);
 
 	// Read data
 	status = H5PTread_packets(packettable_id, 0, (int)nrecords, data_buffer);
