@@ -1,11 +1,22 @@
-###Analysis Tools
+### Analysis Tools
 
-MATLAB scripts for analysis of data acquired using RTXI. 
+**Requirements:** None  
+**Limitations:** None  
 
-The file contains several functions for loading data from an HDF file and it 
-within MATLAB. Example use of the scripts is in a file called `example.m`. 
-Load it and edit it as you need. Make sure the PATH variable is set to include 
-the analysis-tools directory.  
+![Analysis Tools GUI](analysis-tools.png)
 
-Also, the data given to the scripts NEED to have PARAMETER-type variables 
-defined.  
+<!--start-->
+<p><b>Analysis Tools</b></p><p>Analysis tools</p> // TO-DO: add detail here
+<!--end-->
+
+#### Input
+1. input(0) - Input : Input
+
+#### Output
+1. output(0) - Output : Output
+
+#### Parameters
+
+
+#### States
+
