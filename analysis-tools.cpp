@@ -359,8 +359,9 @@ herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t 
 		switch (info->type) {
 			case H5O_TYPE_GROUP:
 				//printf ("%s  (Group)\n", name);
-				if (!currentTrialFlag) {
-					currentTrialFlag = 1;
+				// if (!currentTrialFlag) {
+				if (!qName.startsWith(currentTrial) || currentTrial == "") {
+					// currentTrialFlag = 1;
 					currentTrial = qName;
 					treeParent = new QTreeWidgetItem;
 					treeParent->setText(0, qName);
@@ -371,7 +372,7 @@ herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t 
 					treeChild1->setText(0, "Asynchronous Data");
 					treeParent->addChild(treeChild1);
 				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
-					currentTrialFlag = 0; // reset flag to start parsing next trial
+					// currentTrialFlag = 0; // reset flag to start parsing next trial
 					treeChild1 = new QTreeWidgetItem;
 					currentGroup = "Synchronous Data";
 					treeChild1->setText(0, "Synchronous Data");
