@@ -76,11 +76,12 @@ class HdfViewer : public DefaultGUIModel {
 		// GUI components
 		BasicPlot *omniplot;
 		QwtPlotCurve *tscurve, *fftcurve;
+		QwtText xAxisTitle, yAxisTitle;
 
 		QGroupBox *plotControls, *plotOptions;
 		QLineEdit *fileNameEdit;
-		QPushButton *plotButton, *resetPlotButton, *savePlotButton, 
-						*exportSeriesButton;
+		QPushButton *resetPlotButton, *savePlotButton, 
+		            *exportSeriesButton;
 		QComboBox *windowShape, *plotType;
 		QButtonGroup *plotOptionsButtons;
 		QCheckBox *FWRCheckBox;
@@ -96,11 +97,13 @@ class HdfViewer : public DefaultGUIModel {
 
 	private slots:
 		void getTrialData(void);
+		void changeChannel(QModelIndex);
 		void updatePlotMode(int);
 		void updatePlot(void);
 		void screenshot(void);
 		void clearData(void);
 		void toggleFWR(bool);
+		void resetAxes(void);
 		void changeDataFile(void);
 		void updateWindow(int);
 		void updateKalpha(double);

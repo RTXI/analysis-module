@@ -136,22 +136,16 @@ void HdfViewer::customizeGUI(void) {
 	// Plot controls
 	QVBoxLayout *plotColumnLayout = new QVBoxLayout;
 	customlayout->addLayout(plotColumnLayout, 0, 1);
-	//customlayout->addLayout(plotColumnLayout, 0, 1, 1, 10);
 	plotControls = new QGroupBox("Plot Controls");
 	QHBoxLayout *plotControlsLayout = new QHBoxLayout;
 	plotControls->setLayout(plotControlsLayout);
-	plotButton = new QPushButton("Plot");
-	plotButton->setEnabled(false);
-	QObject::connect(plotButton,SIGNAL(released(void)), this, SLOT(getTrialData(void)));
-	plotButton->setToolTip("Plot data for selected trial and channel");
 	resetPlotButton = new QPushButton("Reset");
-	resetPlotButton->setEnabled(false);
+	QObject::connect(resetPlotButton, SIGNAL(clicked()), this, SLOT(resetAxes()));
 	savePlotButton = new QPushButton("Save");
 	QObject::connect(savePlotButton, SIGNAL(clicked()), this, SLOT(screenshot()));
  	savePlotButton->setToolTip("Save screenshot of the plot");
 	exportSeriesButton = new QPushButton("Export");
 	exportSeriesButton->setEnabled(false);
-	plotControlsLayout->addWidget(plotButton);
 	plotControlsLayout->addWidget(resetPlotButton);
 	plotControlsLayout->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
 	plotControlsLayout->addWidget(savePlotButton);
@@ -161,6 +155,10 @@ void HdfViewer::customizeGUI(void) {
 
 	// Put plot under plot controls 
 	omniplot = new BasicPlot(this);
+	xAxisTitle.setText("X Axis");
+	yAxisTitle.setText("Y Axis");
+	omniplot->setAxisTitle(QwtPlot::xBottom, xAxisTitle);
+	omniplot->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
 	plotColumnLayout->addWidget(omniplot);
 	tscurve = new QwtPlotCurve;
 	fftcurve = new QwtPlotCurve;
@@ -224,11 +222,21 @@ void HdfViewer::customizeGUI(void) {
 	// HDF5 viewer
 	treeViewer = new QTreeWidget;
 	treeViewer->setHeaderLabels(QStringList("HDF5 Viewer"));
+	QObject::connect(treeViewer, SIGNAL(clicked(QModelIndex)), this, SLOT(changeChannel(QModelIndex)));
 	fileColumnLayout->addWidget(treeViewer);
 
 	customlayout->addLayout(fileColumnLayout, 0, 0);
 
 	setLayout(customlayout);
+}
+
+void HdfViewer::changeChannel(QModelIndex id) {
+	// std::cout<<id.row()<<std::endl;
+	getTrialData();
+}
+
+void HdfViewer::resetAxes(void) {
+	updatePlot();
 }
 
 void HdfViewer::updateWindow(int index) {
@@ -329,9 +337,10 @@ int HdfViewer::openFile(QString &filename) {
 		// Iterate through file
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
 		if (!status) {
-			plotButton->setEnabled(true);
 			plotControls->setEnabled(true);
 			plotOptions->setEnabled(true);
+			getTrialData();
+			updatePlot();
 		}
 		else
 			closeFile();
