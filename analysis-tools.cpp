@@ -161,7 +161,9 @@ void HdfViewer::customizeGUI(void) {
 	omniplot->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
 	plotColumnLayout->addWidget(omniplot);
 	tscurve = new QwtPlotCurve;
+	tscurve->setPen(Qt::white);
 	fftcurve = new QwtPlotCurve;
+	fftcurve->setPen(Qt::white);
 
 	// Plot options / file controls
 	plotOptions = new QGroupBox(tr("Plotting Options"));
