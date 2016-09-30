@@ -35,8 +35,6 @@
 #include <scatterplot.h>
 
 namespace HdfViewerUtils {
-herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);
-};
 
 class HdfViewer : public DefaultGUIModel {
 
@@ -107,4 +105,5 @@ class HdfViewer : public DefaultGUIModel {
 		void updateWindow(int);
 		void updateKalpha(double);
 		void updateCalpha(double);
+};
 };

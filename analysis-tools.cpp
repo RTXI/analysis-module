@@ -32,13 +32,8 @@
 
 #include <iostream>
 
-using namespace HdfViewerUtils;
-
-extern "C" Plugin::Object *createRTXIPlugin(void) {
-	return new HdfViewer();
-}
-
-// Globals
+namespace HdfViewerUtils {
+herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);
 QTreeWidget *treeViewer;
 QTreeWidgetItem *treeParent;
 QTreeWidgetItem *treeChild1;
@@ -48,6 +43,12 @@ int currentTrialFlag;
 int firstChannelSelected;
 double *data_buffer, *channel_data, *time_buffer, *period_buffer, *fft_output_y, *fft_output_x;
 complex *fft_input, *fft_buffer;
+};
+using namespace HdfViewerUtils;
+
+extern "C" Plugin::Object *createRTXIPlugin(void) {
+	return new HdfViewer();
+}
 
 static DefaultGUIModel::variable_t vars[] = {
 	{ "Input", "Input", DefaultGUIModel::INPUT, },
