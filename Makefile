@@ -3,7 +3,6 @@ PLUGIN_NAME = analysis_tools
 RTXI_INCLUDES=/usr/local/lib/rtxi_includes
 
 HEADERS = analysis-tools.h\
-          $(RTXI_INCLUDES)/scatterplot.h\
           $(RTXI_INCLUDES)/incrementalplot.h\
           $(RTXI_INCLUDES)/basicplot.h\
           $(RTXI_INCLUDES)/scrollzoomer.h\
@@ -26,7 +25,6 @@ HEADERS = analysis-tools.h\
 
 SOURCES = analysis-tools.cpp\
           moc_analysis-tools.cpp\
-          $(RTXI_INCLUDES)/scatterplot.cpp\
           $(RTXI_INCLUDES)/incrementalplot.cpp\
           $(RTXI_INCLUDES)/basicplot.cpp\
           $(RTXI_INCLUDES)/scrollzoomer.cpp\
@@ -45,7 +43,6 @@ SOURCES = analysis-tools.cpp\
           $(RTXI_INCLUDES)/DSP/cbitrev.cpp\
           $(RTXI_INCLUDES)/DSP/log2.cpp\
           $(RTXI_INCLUDES)/DSP/acosh.cpp\
-          $(RTXI_INCLUDES)/moc_scatterplot.cpp\
           $(RTXI_INCLUDES)/moc_incrementalplot.cpp\
           $(RTXI_INCLUDES)/moc_basicplot.cpp\
           $(RTXI_INCLUDES)/moc_scrollzoomer.cpp\
