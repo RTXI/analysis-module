@@ -235,7 +235,6 @@ void HdfViewer::customizeGUI(void) {
 }
 
 void HdfViewer::changeChannel(QModelIndex id) {
-	// std::cout<<id.row()<<std::endl;
 	getTrialData();
 }
 
@@ -244,21 +243,6 @@ void HdfViewer::resetAxes(void) {
 }
 
 void HdfViewer::updateWindow(int index) {
-	/*
-	 * if (index == 0) {
-	 *   window_shape = RECT;
-	 * } else if (index == 1) {
-	 *   window_shape = TRI;
-	 * } else if (index == 2) {
-	 *   window_shape = HAMM;
-	 * } else if (index == 3) {
-	 *   window_shape = HANN;
-	 * } else if (index == 4) {
-	 *   window_shape = CHEBY;
-	 * } else if (index == 5) {
-	 *   window_shape = KAISER;
-	 * }
-	 */
 	window_shape = (window_t)index;
 	if (plot_mode == FFT) getTrialData();
 }
@@ -380,9 +364,7 @@ herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t 
 		switch (info->type) {
 			case H5O_TYPE_GROUP:
 				//printf ("%s  (Group)\n", name);
-				// if (!currentTrialFlag) {
 				if (!qName.startsWith(currentTrial) || currentTrial == "") {
-					// currentTrialFlag = 1;
 					currentTrial = qName;
 					treeParent = new QTreeWidgetItem;
 					treeParent->setText(0, qName);
@@ -393,7 +375,6 @@ herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t 
 					treeChild1->setText(0, "Asynchronous Data");
 					treeParent->addChild(treeChild1);
 				} else if (qName.startsWith(currentTrial) && qName.endsWith("Synchronous Data")) {
-					// currentTrialFlag = 0; // reset flag to start parsing next trial
 					treeChild1 = new QTreeWidgetItem;
 					currentGroup = "Synchronous Data";
 					treeChild1->setText(0, "Synchronous Data");
@@ -435,16 +416,19 @@ herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t 
 	return 0;
 }
 
-// TODO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
+// TODO: think through error cases here (e.g. when one of the top-level groups
+// are selected, etc.)
 void HdfViewer::getTrialData() {
-	// TODO: check that current item is a dataset (and not a group), only open/plot if a dataset is selected (maybe display an warning otherwise?)
+	// TODO: check that current item is a dataset (and not a group), only
+	// open/plot if a dataset is selected (maybe display an warning otherwise?)
 	herr_t status;
 	hsize_t nrecords, ntrials, nchannels;
 	hid_t packettable_id, trial_id, period_id;
 	double channelDataSum = 0;
 	double channelDataMean;
 	
-	// Check if selected channel is actually a channel (should have 0 children in the treeViewer)
+	// Check if selected channel is actually a channel (should have 0 children in
+	// the treeViewer)
 	if (treeViewer->currentItem()->childCount() != 0) {
 		printf("getTrialData error: selected channel is not a dataset\n");
 		return;
@@ -503,8 +487,9 @@ void HdfViewer::getTrialData() {
 	if(status < 0)
 		printf("Throw error - H5PTread_packets error %d\n", status);
 
-	// Build channel_data array -- pretty messy but seems unavoidable with the current Data Recorder structure
-	// To eliminate a loop later on, find channelDataSum here if full wave rectification option is checked
+	// Build channel_data array -- pretty messy but seems unavoidable with the
+	// current Data Recorder structure. To eliminate a loop later on, find
+	// channelDataSum here if full wave rectification option is checked
 	if (fwrChecked) {
 		int j = 0;
 		for (int i = channelNumInt-1; i < (int)nrecords*(int)nchannels; i = i + (int)nchannels) {
