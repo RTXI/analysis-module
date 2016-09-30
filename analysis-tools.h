@@ -76,6 +76,7 @@ class HdfViewer : public DefaultGUIModel {
 		// GUI components
 		BasicPlot *omniplot;
 		QwtPlotCurve *tscurve, *fftcurve;
+		double xmin, xmax, ymin, ymax;
 		// QwtText xAxisTitle, yAxisTitle;
 
 		QGroupBox *plotControls, *plotOptions;
@@ -108,5 +109,8 @@ class HdfViewer : public DefaultGUIModel {
 		void updateWindow(int);
 		void updateKalpha(double);
 		void updateCalpha(double);
+
+	signals: 
+		void setPlotRange(double, double, double, double);
 };
 };

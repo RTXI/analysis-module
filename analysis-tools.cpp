@@ -232,6 +232,7 @@ void HdfViewer::customizeGUI(void) {
 	customlayout->addLayout(fileColumnLayout, 0, 0);
 
 	setLayout(customlayout);
+	QObject::connect(this, SIGNAL(setPlotRange(double,double,double,double)), omniplot, SLOT(setAxes(double,double,double,double)));
 }
 
 void HdfViewer::changeChannel(QModelIndex id) {
@@ -239,7 +240,7 @@ void HdfViewer::changeChannel(QModelIndex id) {
 }
 
 void HdfViewer::resetAxes(void) {
-	updatePlot();
+	emit setPlotRange(xmin, xmax, ymin, ymax);
 }
 
 void HdfViewer::updateWindow(int index) {
@@ -581,9 +582,15 @@ void HdfViewer::updatePlot(void) {
 		default:
 			break;
 	}
+	
 	omniplot->setAxisAutoScale(omniplot->yLeft, true);
 	omniplot->setAxisAutoScale(omniplot->xBottom, true);
 	omniplot->replot();
+	xmin = omniplot->axisScaleDiv(QwtPlot::xBottom).lowerBound();
+	xmax = omniplot->axisScaleDiv(QwtPlot::xBottom).upperBound();
+	ymin = omniplot->axisScaleDiv(QwtPlot::yLeft).lowerBound();
+	ymax = omniplot->axisScaleDiv(QwtPlot::yLeft).upperBound();
+	emit setPlotRange(xmin, xmax, ymin, ymax);
 }
 
 void HdfViewer::updatePlotMode(int mode) {
