@@ -76,7 +76,7 @@ class HdfViewer : public DefaultGUIModel {
 		// GUI components
 		BasicPlot *omniplot;
 		QwtPlotCurve *tscurve, *fftcurve;
-		QwtText xAxisTitle, yAxisTitle;
+		// QwtText xAxisTitle, yAxisTitle;
 
 		QGroupBox *plotControls, *plotOptions;
 		QLineEdit *fileNameEdit;

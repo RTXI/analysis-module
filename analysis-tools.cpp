@@ -155,10 +155,12 @@ void HdfViewer::customizeGUI(void) {
 
 	// Put plot under plot controls 
 	omniplot = new BasicPlot(this);
-	xAxisTitle.setText("X Axis");
-	yAxisTitle.setText("Y Axis");
-	omniplot->setAxisTitle(QwtPlot::xBottom, xAxisTitle);
-	omniplot->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+	/*
+	 * xAxisTitle.setText("X Axis");
+	 * yAxisTitle.setText("Y Axis");
+	 * omniplot->setAxisTitle(QwtPlot::xBottom, xAxisTitle);
+	 * omniplot->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+	 */
 	plotColumnLayout->addWidget(omniplot);
 	tscurve = new QwtPlotCurve;
 	tscurve->setPen(Qt::white);
