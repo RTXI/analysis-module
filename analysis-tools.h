@@ -75,11 +75,6 @@ class AnalysisTools : public DefaultGUIModel {
 		BasicPlot *omniplot;
 		QwtPlotCurve *tscurve, *fftcurve;
 
-		/*
-		 * ScatterPlot *splot;
-		 * BasicPlot *fftplot;
-		 * QwtPlotCurve *fftcurve;
-		 */
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton, *resetPlotButton, *savePlotButton, 
 						*exportSeriesButton;
@@ -87,7 +82,6 @@ class AnalysisTools : public DefaultGUIModel {
 		QButtonGroup *plotOptionsButtons;
 		QCheckBox *FWRCheckBox;
 		QDoubleSpinBox *kalphaEdit, *calphaEdit;
-		// QTextEdit *parameterView;
 
 		// custom functions
 		void initParameters(void);
@@ -102,11 +96,6 @@ class AnalysisTools : public DefaultGUIModel {
 		void updatePlotMode(int);
 		void updatePlot(void);
 		void screenshot(void);
-		/*
-		 * void screenshotTS(void);
-		 * void screenshotScatter(void);
-		 * void screenshotFFT(void);
-		 */
 		void clearData(void);
 		void toggleFWR(bool);
 		void changeDataFile(void);

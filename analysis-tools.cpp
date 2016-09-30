@@ -147,61 +147,6 @@ void AnalysisTools::customizeGUI(void) {
 	plotColumnLayout->addWidget(omniplot);
 	tscurve = new QwtPlotCurve;
 	fftcurve = new QwtPlotCurve;
-	// omnicurve = new QwtPlotCurve;
-	// omnicurve->attach(omniplot);
-
-/*
- *   QGroupBox *plotBox = new QGroupBox("Save Screenshot");
- *   QHBoxLayout *plotBoxLayout = new QHBoxLayout;
- *   plotBox->setLayout(plotBoxLayout);
- *   QPushButton *saveTSPlotButton = new QPushButton("Time Series Plot");
- *   saveTSPlotButton->setToolTip("Save screenshot of the time series plot");
- *   plotBoxLayout->addWidget(saveTSPlotButton);
- *   QPushButton *saveScatterPlotButton = new QPushButton("Scatter Plot");
- *   saveScatterPlotButton->setToolTip("Save screenshot of the scatter plot");
- *   plotBoxLayout->addWidget(saveScatterPlotButton);
- *   QPushButton *saveFFTPlotButton = new QPushButton("FFT Plot");
- *   saveFFTPlotButton->setToolTip("Save screenshot of the FFT plot");
- *   plotBoxLayout->addWidget(saveFFTPlotButton);
- *   customlayout->addWidget(plotBox, 0, 2, 1, 4);
- *   //plotBox->setMinimumSize(910, 0);
- * 
- *   // Initialize plots
- *   QGroupBox *tsplotBox = new QGroupBox("Time Series Plot");
- *   QHBoxLayout *tsplotBoxLayout = new QHBoxLayout;
- *   tsplotBox->setLayout(tsplotBoxLayout);
- *   tsplot = new BasicPlot(this);
- *   //tsplot->setFixedSize(450, 270);
- *   tsplotBoxLayout->addWidget(tsplot);
- *   customlayout->addWidget(tsplotBox, 1, 2, 3, 2);
- *   tscurve = new QwtPlotCurve;
- *   tscurve->attach(tsplot);
- * 
- *   QGroupBox *scatterplotBox = new QGroupBox("Scatter Plot");
- *   QHBoxLayout *scatterplotBoxLayout = new QHBoxLayout;
- *   scatterplotBox->setLayout(scatterplotBoxLayout);
- *   splot = new ScatterPlot(this);
- *   //splot->setFixedSize(450, 270);
- *   scatterplotBoxLayout->addWidget(splot);
- *   customlayout->addWidget(scatterplotBox, 1, 4, 3, 2);
- * 
- *   QGroupBox *fftplotBox = new QGroupBox("FFT Plot");
- *   QHBoxLayout *fftplotBoxLayout = new QHBoxLayout;
- *   fftplotBox->setLayout(fftplotBoxLayout);
- *   fftplot = new BasicPlot(this);
- *   //fftplot->setFixedSize(675, 270);
- *   fftplotBoxLayout->addWidget(fftplot);
- *   customlayout->addWidget(fftplotBox, 4, 3, 3, 3);
- *   fftcurve = new QwtPlotCurve;
- *   fftcurve->attach(fftplot);
- */
-
-	// Connect screenshot buttons to functions
-	/*
-	 * QObject::connect(saveTSPlotButton, SIGNAL(clicked()), this, SLOT(screenshotTS()));
-	 * QObject::connect(saveScatterPlotButton, SIGNAL(clicked()), this, SLOT(screenshotScatter()));
-	 * QObject::connect(saveFFTPlotButton, SIGNAL(clicked()), this, SLOT(screenshotFFT()));
-	 */
 
 	// File control
 	QVBoxLayout *fileColumnLayout = new QVBoxLayout;
@@ -221,14 +166,6 @@ void AnalysisTools::customizeGUI(void) {
 	QGroupBox *plotControlBox = new QGroupBox(tr("Plotting Options"));
 	QGridLayout *plotControlBoxLayout = new QGridLayout;
 	plotControlBox->setLayout(plotControlBoxLayout);
-
-	/*
-	 * plotButton = new QPushButton("Plot");
-	 * plotButton->setEnabled(false);
-	 * QObject::connect(plotButton,SIGNAL(released(void)), this, SLOT(getTrialData(void)));
-	 * plotButton->setToolTip("Plot data for selected trial and channel");
-	 * plotControlBoxLayout->addWidget(plotButton, 0, 0, 1, 2);
-	 */
 
 	QLabel *plotTypeLabel = new QLabel("Plot Type");
 	plotType = new QComboBox;
@@ -287,73 +224,6 @@ void AnalysisTools::customizeGUI(void) {
 
 	customlayout->addLayout(fileColumnLayout, 0, 0);
 
-	// Global plot options
-	/*
-	 * QGroupBox *optionBox = new QGroupBox;
-	 * QGridLayout *optionBoxLayout = new QGridLayout;
-	 * optionBox->setLayout(optionBoxLayout);
-	 * QHBoxLayout *plotSelectionLayout = new QHBoxLayout;
-	 * QButtonGroup *optionButtons = new QButtonGroup;
-	 * optionButtons->setExclusive(false);
-	 * QCheckBox *plotTSCheckBox = new QCheckBox("Time Series");
-	 * plotSelectionLayout->addWidget(plotTSCheckBox);
-	 * optionButtons->addButton(plotTSCheckBox);
-	 * plotTSCheckBox->setChecked(true);
-	 * QCheckBox *plotScatterCheckBox = new QCheckBox("Scatter");
-	 * plotSelectionLayout->addWidget(plotScatterCheckBox);
-	 * optionButtons->addButton(plotScatterCheckBox);
-	 * plotScatterCheckBox->setChecked(true);
-	 * QCheckBox *plotFFTCheckBox = new QCheckBox("FFT");
-	 * plotSelectionLayout->addWidget(plotFFTCheckBox);
-	 * optionButtons->addButton(plotFFTCheckBox);
-	 * plotFFTCheckBox->setChecked(true);
-	 * // TODO: add toggles for all related plot options
-	 * QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),tsplot,SLOT(setEnabled(bool)));
-	 * QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),saveTSPlotButton,SLOT(setEnabled(bool)));
-	 * QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),FWRCheckBox,SLOT(setEnabled(bool)));
-	 * //QObject::connect(plotTSCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleTSplot(bool)));
-	 * QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),splot,SLOT(setEnabled(bool)));
-	 * QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),saveScatterPlotButton,SLOT(setEnabled(bool)));
-	 * //QObject::connect(plotScatterCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleScatterplot(bool)));
-	 * QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),fftplot,SLOT(setEnabled(bool)));
-	 * QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),saveFFTPlotButton,SLOT(setEnabled(bool)));
-	 * //QObject::connect(plotFFTCheckBox,SIGNAL(toggled(bool)),this,SLOT(toggleFFTplot(bool)));
-	 * plotTSCheckBox->setToolTip("Enable time series plot");
-	 * plotScatterCheckBox->setToolTip("Enable scatter plot");
-	 * plotFFTCheckBox->setToolTip("Enable FFT plot");
-	 * optionBoxLayout->addLayout(plotSelectionLayout, 0, 0);
-	 */
-
-	/*
-	 * QVBoxLayout *plotButtonLayout = new QVBoxLayout;
-	 * plotButton = new QPushButton("Plot");
-	 * plotButtonLayout->addWidget(plotButton);
-	 * plotButton->setEnabled(false);
-	 * QObject::connect(plotButton,SIGNAL(released(void)), this, SLOT(getTrialData(void)));
-	 * plotButton->setToolTip("Plot data for selected trial and channel");
-	 * optionBoxLayout->addLayout(plotButtonLayout, 1, 0);
-	 * customlayout->addWidget(optionBox, 1, 0, 1, 1);
-	 */
-
-	// Parameters
-	/*
-	 * QGroupBox *paramsBox = new QGroupBox(tr("Parameters"));
-	 * QHBoxLayout *paramsLayout = new QHBoxLayout;
-	 * paramsBox->setLayout(paramsLayout);
-	 * parameterView = new QTextEdit;
-	 * parameterView->setFixedWidth(220);
-	 * paramsLayout->addWidget(parameterView);
-	 * paramsBox->setMaximumSize(250, 500);
-	 * customlayout->addWidget(paramsBox, 4, 2, 3, 1);
-	 */
-
-	// Standard module buttons
-	/*
-	 * DefaultGUIModel::pauseButton->setEnabled(false);
-	 * DefaultGUIModel::modifyButton->setEnabled(false);
-	 * DefaultGUIModel::unloadButton->setToolTip("Close module");
-	 */
-
 	setLayout(customlayout);
 }
 
@@ -405,29 +275,9 @@ void AnalysisTools::makeWindow(int num_points) {
 }
 
 void AnalysisTools::screenshot() {
-//	QString filename = QFileDialog::getSaveFileName(this, "Screenshot File Name", QString("screenshot.pdf"), "PDF Documents (*.pdf)");
-//	if (!filename.isEmpty()) {
-		QwtPlotRenderer renderer;
-		renderer.exportTo(omniplot, "screenshot.pdf");
-//	}
+	QwtPlotRenderer renderer;
+	renderer.exportTo(omniplot, "screenshot.pdf");
 }
-
-/*
- * void AnalysisTools::screenshotTS() {
- *   QwtPlotRenderer renderer;
- *   renderer.exportTo(tsplot,"screenshot.pdf");
- * }
- * 
- * void AnalysisTools::screenshotScatter() {
- *   QwtPlotRenderer renderer;
- *   renderer.exportTo(splot,"screenshot.pdf");
- * }
- * 
- * void AnalysisTools::screenshotFFT() {
- *   QwtPlotRenderer renderer;
- *   renderer.exportTo(fftplot,"screenshot.pdf");
- * }
- */
 
 void AnalysisTools::clearData() {
 }
@@ -437,7 +287,6 @@ void AnalysisTools::toggleFWR(bool fwrStatus) {
 }
 
 // TODO: may need to restore toggle functions to allow plots to be cleared when deselected
-
 void AnalysisTools::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
@@ -695,18 +544,6 @@ void AnalysisTools::getTrialData() {
 	tscurve->setRawSamples(time_buffer, channel_data, (int)nrecords);
 	fftcurve->setRawSamples(fft_output_x, fft_output_y, fft_length);
 	updatePlot();
-
-	/*
-	 * tscurve->setRawSamples(time_buffer, channel_data, (int)nrecords);
-	 * fftcurve->setRawSamples(fft_output_x, fft_output_y, fft_length);
-	 * // Refresh enabled plots (turn autoscaling on in case the zoom feature was used)
-	 * tsplot->setAxisAutoScale(tsplot->yLeft, true);
-	 * tsplot->setAxisAutoScale(tsplot->xBottom, true);
-	 * tsplot->replot();
-	 * fftplot->setAxisAutoScale(fftplot->yLeft, true);
-	 * fftplot->setAxisAutoScale(fftplot->xBottom, true);
-	 * fftplot->replot();
-	 */
 
 	// Close identifiers
 	H5PTclose(packettable_id);
