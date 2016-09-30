@@ -244,27 +244,33 @@ void HdfViewer::resetAxes(void) {
 }
 
 void HdfViewer::updateWindow(int index) {
-	if (index == 0) {
-		window_shape = RECT;
-	} else if (index == 1) {
-		window_shape = TRI;
-	} else if (index == 2) {
-		window_shape = HAMM;
-	} else if (index == 3) {
-		window_shape = HANN;
-	} else if (index == 4) {
-		window_shape = CHEBY;
-	} else if (index == 5) {
-		window_shape = KAISER;
-	}
+	/*
+	 * if (index == 0) {
+	 *   window_shape = RECT;
+	 * } else if (index == 1) {
+	 *   window_shape = TRI;
+	 * } else if (index == 2) {
+	 *   window_shape = HAMM;
+	 * } else if (index == 3) {
+	 *   window_shape = HANN;
+	 * } else if (index == 4) {
+	 *   window_shape = CHEBY;
+	 * } else if (index == 5) {
+	 *   window_shape = KAISER;
+	 * }
+	 */
+	window_shape = (window_t)index;
+	if (plot_mode == FFT) getTrialData();
 }
 
 void HdfViewer::updateKalpha(double KalphaInput) {
 	Kalpha = KalphaInput;
+	if (plot_mode == FFT) getTrialData();
 }
 
 void HdfViewer::updateCalpha(double CalphaInput) {
 	Calpha = CalphaInput;
+	if (plot_mode == FFT) getTrialData();
 }
 
 void HdfViewer::makeWindow(int num_points) {
@@ -300,6 +306,7 @@ void HdfViewer::clearData() {
 
 void HdfViewer::toggleFWR(bool fwrStatus) {
 	fwrChecked = fwrStatus;
+	if (plot_mode == FFT) getTrialData();
 }
 
 // TODO: may need to restore toggle functions to allow plots to be cleared when deselected
@@ -596,7 +603,7 @@ void HdfViewer::updatePlot(void) {
 
 void HdfViewer::updatePlotMode(int mode) {
 	plot_mode = (plot_t)mode;
-	// updatePlot();
+	updatePlot();
 }
 
 // Temporary function for validating data access
