@@ -34,13 +34,17 @@
 #include <hdf5_hl.h>
 #include <scatterplot.h>
 
-class AnalysisTools : public DefaultGUIModel {
+namespace HdfViewerUtils {
+herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);
+};
+
+class HdfViewer : public DefaultGUIModel {
 
 	Q_OBJECT
 
 	public:
-		AnalysisTools(void);
-		virtual ~AnalysisTools(void);
+		HdfViewer(void);
+		virtual ~HdfViewer(void);
 		void execute(void);
 		void customizeGUI(void);
 		
@@ -75,6 +79,7 @@ class AnalysisTools : public DefaultGUIModel {
 		BasicPlot *omniplot;
 		QwtPlotCurve *tscurve, *fftcurve;
 
+		QGroupBox *plotControls, *plotOptions;
 		QLineEdit *fileNameEdit;
 		QPushButton *plotButton, *resetPlotButton, *savePlotButton, 
 						*exportSeriesButton;
@@ -103,5 +108,3 @@ class AnalysisTools : public DefaultGUIModel {
 		void updateKalpha(double);
 		void updateCalpha(double);
 };
-
-herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);

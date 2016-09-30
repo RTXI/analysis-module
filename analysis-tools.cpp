@@ -32,8 +32,10 @@
 
 #include <iostream>
 
+using namespace HdfViewerUtils;
+
 extern "C" Plugin::Object *createRTXIPlugin(void) {
-	return new AnalysisTools();
+	return new HdfViewer();
 }
 
 // Globals
@@ -54,7 +56,7 @@ static DefaultGUIModel::variable_t vars[] = {
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 
-AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
+HdfViewer::HdfViewer(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
 	setWhatsThis(
 			"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TODO: add detail here
 	initParameters();
@@ -65,7 +67,7 @@ AnalysisTools::AnalysisTools(void) :  DefaultGUIModel("Analysis Tools", ::vars, 
 	QTimer::singleShot(0, this, SLOT(resizeMe()));
 }
 
-AnalysisTools::~AnalysisTools(void)
+HdfViewer::~HdfViewer(void)
 {
 	if(file_id) {
 		H5Fclose(file_id);
@@ -74,11 +76,11 @@ AnalysisTools::~AnalysisTools(void)
 	freePlotBuffers();
 }
 
-void AnalysisTools::execute(void) {
+void HdfViewer::execute(void) {
 	return;
 }
 
-void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
+void HdfViewer::update(DefaultGUIModel::update_flags_t flag) {
 	switch (flag) {
 		case INIT:
 			break;
@@ -95,7 +97,7 @@ void AnalysisTools::update(DefaultGUIModel::update_flags_t flag) {
 	}
 };
 
-void AnalysisTools::initParameters() {
+void HdfViewer::initParameters() {
 	fwrChecked = 0;
 	file_id = 0;
 	data_buffer = NULL;
@@ -110,20 +112,33 @@ void AnalysisTools::initParameters() {
 	Calpha = 70;
 }
 
-void AnalysisTools::customizeGUI(void) {
+void HdfViewer::customizeGUI(void) {
 	QGridLayout *customlayout = DefaultGUIModel::getLayout(); 
 	customlayout->itemAtPosition(1,0)->widget()->setVisible(false);
 	customlayout->itemAtPosition(10,0)->widget()->setVisible(false);
 	customlayout->setColumnStretch(0,0);
 	customlayout->setColumnStretch(1,1);
 
+	// File control
+	QVBoxLayout *fileColumnLayout = new QVBoxLayout;
+	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
+	QHBoxLayout *fileLayout = new QHBoxLayout;
+	fileBox->setLayout(fileLayout);
+	fileNameEdit = new QLineEdit;
+	fileNameEdit->setReadOnly(true);
+	fileLayout->addWidget(fileNameEdit);
+	QPushButton *fileChangeButton = new QPushButton("Open");
+	fileLayout->addWidget(fileChangeButton);
+	QObject::connect(fileChangeButton,SIGNAL(released(void)),this,SLOT(changeDataFile(void)));
+	fileColumnLayout->addWidget(fileBox);
+
 	// Plot controls
 	QVBoxLayout *plotColumnLayout = new QVBoxLayout;
 	customlayout->addLayout(plotColumnLayout, 0, 1);
 	//customlayout->addLayout(plotColumnLayout, 0, 1, 1, 10);
-	QGroupBox *plotBox = new QGroupBox("Plot Controls");
-	QHBoxLayout *plotBoxLayout = new QHBoxLayout;
-	plotBox->setLayout(plotBoxLayout);
+	plotControls = new QGroupBox("Plot Controls");
+	QHBoxLayout *plotControlsLayout = new QHBoxLayout;
+	plotControls->setLayout(plotControlsLayout);
 	plotButton = new QPushButton("Plot");
 	plotButton->setEnabled(false);
 	QObject::connect(plotButton,SIGNAL(released(void)), this, SLOT(getTrialData(void)));
@@ -135,12 +150,13 @@ void AnalysisTools::customizeGUI(void) {
  	savePlotButton->setToolTip("Save screenshot of the plot");
 	exportSeriesButton = new QPushButton("Export");
 	exportSeriesButton->setEnabled(false);
-	plotBoxLayout->addWidget(plotButton);
-	plotBoxLayout->addWidget(resetPlotButton);
-	plotBoxLayout->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
-	plotBoxLayout->addWidget(savePlotButton);
-	plotBoxLayout->addWidget(exportSeriesButton);
-	plotColumnLayout->addWidget(plotBox);
+	plotControlsLayout->addWidget(plotButton);
+	plotControlsLayout->addWidget(resetPlotButton);
+	plotControlsLayout->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
+	plotControlsLayout->addWidget(savePlotButton);
+	plotControlsLayout->addWidget(exportSeriesButton);
+	plotColumnLayout->addWidget(plotControls);
+	plotControls->setEnabled(false);
 
 	// Put plot under plot controls 
 	omniplot = new BasicPlot(this);
@@ -148,24 +164,10 @@ void AnalysisTools::customizeGUI(void) {
 	tscurve = new QwtPlotCurve;
 	fftcurve = new QwtPlotCurve;
 
-	// File control
-	QVBoxLayout *fileColumnLayout = new QVBoxLayout;
-	QGroupBox *fileBox = new QGroupBox(tr("File Control"));
-	QHBoxLayout *fileLayout = new QHBoxLayout;
-	fileBox->setLayout(fileLayout);
-	//fileLayout->addWidget(new QLabel(tr("File Name")));
-	fileNameEdit = new QLineEdit;
-	fileNameEdit->setReadOnly(true);
-	fileLayout->addWidget(fileNameEdit);
-	QPushButton *fileChangeButton = new QPushButton("Open");
-	fileLayout->addWidget(fileChangeButton);
-	QObject::connect(fileChangeButton,SIGNAL(released(void)),this,SLOT(changeDataFile(void)));
-	fileColumnLayout->addWidget(fileBox);
-
 	// Plot options / file controls
-	QGroupBox *plotControlBox = new QGroupBox(tr("Plotting Options"));
-	QGridLayout *plotControlBoxLayout = new QGridLayout;
-	plotControlBox->setLayout(plotControlBoxLayout);
+	plotOptions = new QGroupBox(tr("Plotting Options"));
+	QGridLayout *plotOptionsLayout = new QGridLayout;
+	plotOptions->setLayout(plotOptionsLayout);
 
 	QLabel *plotTypeLabel = new QLabel("Plot Type");
 	plotType = new QComboBox;
@@ -173,8 +175,8 @@ void AnalysisTools::customizeGUI(void) {
 	plotType->insertItem(2, "Scatter");
 	plotType->insertItem(3, "FFT");
 	QObject::connect(plotType, SIGNAL(currentIndexChanged(int)), this, SLOT(updatePlotMode(int)));
-	plotControlBoxLayout->addWidget(plotTypeLabel, 1, 0);
-	plotControlBoxLayout->addWidget(plotType, 1, 1);
+	plotOptionsLayout->addWidget(plotTypeLabel, 1, 0);
+	plotOptionsLayout->addWidget(plotType, 1, 1);
 
 	QVBoxLayout *plotOptionsVerticalLayout = new QVBoxLayout;
 	plotOptionsButtons = new QButtonGroup;
@@ -185,7 +187,7 @@ void AnalysisTools::customizeGUI(void) {
 	FWRCheckBox->setChecked(false);
 	QObject::connect(FWRCheckBox, SIGNAL(toggled(bool)),this,SLOT(toggleFWR(bool)));
 	FWRCheckBox->setToolTip("Enable full wave rectification of time series plot");
-	plotControlBoxLayout->addLayout(plotOptionsVerticalLayout, 2, 0, 1, 2);
+	plotOptionsLayout->addLayout(plotOptionsVerticalLayout, 2, 0, 1, 2);
 
 	QLabel *windowLabel = new QLabel("FFT window shape:");
 	windowShape = new QComboBox;
@@ -197,25 +199,26 @@ void AnalysisTools::customizeGUI(void) {
 	windowShape->insertItem(6, "Kaiser");
 	QObject::connect(windowShape, SIGNAL(activated(int)), this, SLOT(updateWindow(int)));
 	windowShape->setToolTip("Choose a window to apply for the FFT plot. For no window, choose Rectangular.");
-	plotControlBoxLayout->addWidget(windowLabel, 3, 0);
-	plotControlBoxLayout->addWidget(windowShape, 3, 1);
+	plotOptionsLayout->addWidget(windowLabel, 3, 0);
+	plotOptionsLayout->addWidget(windowShape, 3, 1);
 
 	QLabel *kalphaLabel = new QLabel("Kaiser Alpha");
-	plotControlBoxLayout->addWidget(kalphaLabel, 4, 0);
-	QDoubleSpinBox *kalphaEdit = new QDoubleSpinBox(plotControlBox);
+	plotOptionsLayout->addWidget(kalphaLabel, 4, 0);
+	QDoubleSpinBox *kalphaEdit = new QDoubleSpinBox(plotOptions);
 	kalphaEdit->setValue(Kalpha);
 	QObject::connect(kalphaEdit, SIGNAL(valueChanged(double)), this, SLOT(updateKalpha(double)));
 	kalphaEdit->setToolTip("Attenuation parameter for Kaiser window");
-	plotControlBoxLayout->addWidget(kalphaEdit, 4, 1);
+	plotOptionsLayout->addWidget(kalphaEdit, 4, 1);
 
 	QLabel *calphaLabel = new QLabel("Chebyshev (dB)");
-	plotControlBoxLayout->addWidget(calphaLabel, 5, 0);
-	calphaEdit = new QDoubleSpinBox(plotControlBox);
+	plotOptionsLayout->addWidget(calphaLabel, 5, 0);
+	calphaEdit = new QDoubleSpinBox(plotOptions);
 	calphaEdit->setValue(Calpha);
 	QObject::connect(calphaEdit, SIGNAL(valueChanged(double)), this, SLOT(updateCalpha(double)));
 	calphaEdit->setToolTip("Attenuation parameter for Chebyshev window");
-	plotControlBoxLayout->addWidget(calphaEdit, 5, 1);
-	fileColumnLayout->addWidget(plotControlBox);
+	plotOptionsLayout->addWidget(calphaEdit, 5, 1);
+	fileColumnLayout->addWidget(plotOptions);
+	plotOptions->setEnabled(false);
 
 	// HDF5 viewer
 	treeViewer = new QTreeWidget;
@@ -227,7 +230,7 @@ void AnalysisTools::customizeGUI(void) {
 	setLayout(customlayout);
 }
 
-void AnalysisTools::updateWindow(int index) {
+void HdfViewer::updateWindow(int index) {
 	if (index == 0) {
 		window_shape = RECT;
 	} else if (index == 1) {
@@ -243,15 +246,15 @@ void AnalysisTools::updateWindow(int index) {
 	}
 }
 
-void AnalysisTools::updateKalpha(double KalphaInput) {
+void HdfViewer::updateKalpha(double KalphaInput) {
 	Kalpha = KalphaInput;
 }
 
-void AnalysisTools::updateCalpha(double CalphaInput) {
+void HdfViewer::updateCalpha(double CalphaInput) {
 	Calpha = CalphaInput;
 }
 
-void AnalysisTools::makeWindow(int num_points) {
+void HdfViewer::makeWindow(int num_points) {
 	switch (window_shape) {
 		case RECT: // rectangular
 			disc_window = new RectangularWindow(num_points);
@@ -274,20 +277,20 @@ void AnalysisTools::makeWindow(int num_points) {
 	} // end of switch on window_shape
 }
 
-void AnalysisTools::screenshot() {
+void HdfViewer::screenshot() {
 	QwtPlotRenderer renderer;
 	renderer.exportTo(omniplot, "screenshot.pdf");
 }
 
-void AnalysisTools::clearData() {
+void HdfViewer::clearData() {
 }
 
-void AnalysisTools::toggleFWR(bool fwrStatus) {
+void HdfViewer::toggleFWR(bool fwrStatus) {
 	fwrChecked = fwrStatus;
 }
 
 // TODO: may need to restore toggle functions to allow plots to be cleared when deselected
-void AnalysisTools::changeDataFile(void) {
+void HdfViewer::changeDataFile(void) {
 	QFileDialog fileDialog(this);
 	fileDialog.setFileMode(QFileDialog::AnyFile);
 	fileDialog.setWindowTitle("Select Data File");
@@ -314,7 +317,7 @@ void AnalysisTools::changeDataFile(void) {
 
 // TODO: populate HDF5, attribute, and parameter viewer contents
 //        enable any scatter/FFT specific options
-int AnalysisTools::openFile(QString &filename) {
+int HdfViewer::openFile(QString &filename) {
 	herr_t status = -1;
 	currentTrialFlag = 0;
 	currentTrial = "";
@@ -324,8 +327,11 @@ int AnalysisTools::openFile(QString &filename) {
 		file_id = H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
 		// Iterate through file
 		status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, NULL);
-		if (!status)
+		if (!status) {
 			plotButton->setEnabled(true);
+			plotControls->setEnabled(true);
+			plotOptions->setEnabled(true);
+		}
 		else
 			closeFile();
 	}
@@ -334,7 +340,7 @@ int AnalysisTools::openFile(QString &filename) {
 
 // TODO: erase HDF5, attribute, and parameter viewer contents
 //        disable plot button and any scatter/FFT specific options
-void AnalysisTools::closeFile()
+void HdfViewer::closeFile()
 {
 	if(file_id) {
 		H5Fclose(file_id);
@@ -344,7 +350,7 @@ void AnalysisTools::closeFile()
 }
 
 // TODO: clean up treeViewer -- no need to list full path for each parent/child
-herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
+herr_t HdfViewerUtils::op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *operator_data) {
 	QString qName = QString(name);
 	//printf ("/");
 	if (name[0] == '.') {
@@ -408,7 +414,7 @@ herr_t op_func(hid_t loc_id, const char *name, const H5O_info_t *info, void *ope
 }
 
 // TODO: think through error cases here (e.g. when one of the top-level groups are selected, etc.)
-void AnalysisTools::getTrialData() {
+void HdfViewer::getTrialData() {
 	// TODO: check that current item is a dataset (and not a group), only open/plot if a dataset is selected (maybe display an warning otherwise?)
 	herr_t status;
 	hsize_t nrecords, ntrials, nchannels;
@@ -552,8 +558,9 @@ void AnalysisTools::getTrialData() {
 }
 
 // Temporary function for validating data access
-void AnalysisTools::updatePlot(void) {
-	// omniplot->detachItems(QwtPlotItem::Rtti_PlotItem, true);
+void HdfViewer::updatePlot(void) {
+	tscurve->detach();
+	fftcurve->detach();
 
 	switch(plot_mode) {
 		case TIMESERIES:
@@ -572,20 +579,20 @@ void AnalysisTools::updatePlot(void) {
 	omniplot->replot();
 }
 
-void AnalysisTools::updatePlotMode(int mode) {
+void HdfViewer::updatePlotMode(int mode) {
 	plot_mode = (plot_t)mode;
 	// updatePlot();
 }
 
 // Temporary function for validating data access
-void AnalysisTools::dump_vals(double *data, hsize_t *ndims)
+void HdfViewer::dump_vals(double *data, hsize_t *ndims)
 {
 	// Only printing first value out or else the printf will block
 	for(size_t i=0; i<10; i++)
 		printf("value is %f\n", data[i]);
 }
 
-void AnalysisTools::freePlotBuffers()
+void HdfViewer::freePlotBuffers()
 {
 	if(data_buffer) {
 		free(data_buffer);
