@@ -16,7 +16,6 @@
 
  */
 
-#include <QtGui>
 #include <QMessageBox>
 #include <QFileInfo>
 
@@ -48,6 +47,9 @@ class AnalysisTools : public DefaultGUIModel {
 		enum window_t	{
 			RECT=0, TRI, HAMM, HANN, CHEBY, KAISER
 		};
+		enum plot_t	{
+			TIMESERIES, SCATTER, FFT
+		};
 
 	public slots:
 
@@ -60,6 +62,7 @@ class AnalysisTools : public DefaultGUIModel {
 		// inputs, states, flags, calculated values
 		bool fwrChecked;
 		GenericWindow *disc_window;
+		plot_t plot_mode;
 		window_t window_shape;
 		double Kalpha; // Kaiser window sidelobe attenuation parameter
 		double Calpha; // Chebyshev window sidelobe attenuation parameter
@@ -69,15 +72,22 @@ class AnalysisTools : public DefaultGUIModel {
 		hid_t dataset_id;
 		
 		// GUI components
-		BasicPlot *tsplot;
-		QwtPlotCurve *tscurve;
-		ScatterPlot *splot;
-		BasicPlot *fftplot;
-		QwtPlotCurve *fftcurve;
+		BasicPlot *omniplot;
+		QwtPlotCurve *tscurve, *fftcurve;
+
+		/*
+		 * ScatterPlot *splot;
+		 * BasicPlot *fftplot;
+		 * QwtPlotCurve *fftcurve;
+		 */
 		QLineEdit *fileNameEdit;
-		QPushButton *plotButton;
-		QComboBox *windowShape;
-		QTextEdit *parameterView;
+		QPushButton *plotButton, *resetPlotButton, *savePlotButton, 
+						*exportSeriesButton;
+		QComboBox *windowShape, *plotType;
+		QButtonGroup *plotOptionsButtons;
+		QCheckBox *FWRCheckBox;
+		QDoubleSpinBox *kalphaEdit, *calphaEdit;
+		// QTextEdit *parameterView;
 
 		// custom functions
 		void initParameters(void);
@@ -88,10 +98,15 @@ class AnalysisTools : public DefaultGUIModel {
 		void freePlotBuffers(void);
 
 	private slots:
-		void plotTrial(void);
-		void screenshotTS(void);
-		void screenshotScatter(void);
-		void screenshotFFT(void);
+		void getTrialData(void);
+		void updatePlotMode(int);
+		void updatePlot(void);
+		void screenshot(void);
+		/*
+		 * void screenshotTS(void);
+		 * void screenshotScatter(void);
+		 * void screenshotFFT(void);
+		 */
 		void clearData(void);
 		void toggleFWR(bool);
 		void changeDataFile(void);
