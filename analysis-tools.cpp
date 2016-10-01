@@ -21,6 +21,8 @@
  */
 
 #include <QtGlobal>
+#include <QFileInfo>
+
 #include <algorithm>
 
 #include <main_window.h>
@@ -145,7 +147,7 @@ void HdfViewer::customizeGUI(void) {
 	QObject::connect(savePlotButton, SIGNAL(clicked()), this, SLOT(screenshot()));
  	savePlotButton->setToolTip("Save screenshot of the plot");
 	exportSeriesButton = new QPushButton("Export");
-	exportSeriesButton->setEnabled(false);
+	QObject::connect(exportSeriesButton, SIGNAL(clicked()), this, SLOT(exportData()));
 	plotControlsLayout->addWidget(resetPlotButton);
 	plotControlsLayout->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
 	plotControlsLayout->addWidget(savePlotButton);
@@ -233,6 +235,59 @@ void HdfViewer::customizeGUI(void) {
 
 	setLayout(customlayout);
 	QObject::connect(this, SIGNAL(setPlotRange(double,double,double,double)), omniplot, SLOT(setAxes(double,double,double,double)));
+}
+
+void HdfViewer::exportData() {
+	QFileDialog *fd = new QFileDialog(this);
+	fd->setFileMode(QFileDialog::AnyFile);
+	fd->setViewMode(QFileDialog::Detail);
+	fd->setDefaultSuffix("txt");
+
+	QString fileName = QFileDialog::getSaveFileName(
+		this, "Save the plotted data", "~/",
+		"Text Files (*.txt);;All Files (*.*)");
+
+	// If filename does not include .csp extension, add extension
+	if (!(fileName.endsWith(".txt"))) fileName.append(".txt");
+
+
+	// If filename exists, warn user
+	if (QFileInfo(fileName).exists() &&
+		QMessageBox::warning(
+			this, "File Exists", "Do you wish to overwrite " + fileName + "?",
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		 return; // Return if answer is no
+
+	// Save protocol to file
+	QFile file(fileName); // Open file
+	if (!file.open(
+		QIODevice::WriteOnly)) { // Open file, return error if unable to do so
+		QMessageBox::warning(
+			this, "Error", "Unable to save file: Please check folder permissions.");
+	 	return;
+	}
+
+	QTextStream stream(&file);
+	int n;
+	switch(plot_mode) {
+		case TIMESERIES:
+			n = tscurve->dataSize();
+			for (int i = 0; i < n; i++) {
+				stream << (double) time_buffer[i] << " " << (double) channel_data[i] << "\n";
+			}
+			break;
+		case SCATTER:
+			break;
+		case FFT:
+			n = fftcurve->dataSize();
+			for (int i = 0; i < n; i++) {
+				stream << (double) fft_output_x[i] << " " << (double) fft_output_y[i] << "\n";
+			}
+			break;
+		default:
+			break;
+	}
+	file.close();
 }
 
 void HdfViewer::changeChannel(QModelIndex id) {

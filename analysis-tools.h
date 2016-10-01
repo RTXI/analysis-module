@@ -109,6 +109,7 @@ class HdfViewer : public DefaultGUIModel {
 		void updateWindow(int);
 		void updateKalpha(double);
 		void updateCalpha(double);
+		void exportData(void);
 
 	signals: 
 		void setPlotRange(double, double, double, double);
