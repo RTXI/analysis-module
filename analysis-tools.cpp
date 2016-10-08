@@ -53,15 +53,12 @@ extern "C" Plugin::Object *createRTXIPlugin(void) {
 }
 
 static DefaultGUIModel::variable_t vars[] = {
-	{ "Input", "Input", DefaultGUIModel::INPUT, },
-	{ "Output", "Output", DefaultGUIModel::OUTPUT, }, 
 };
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 
-HdfViewer::HdfViewer(void) :  DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
-	setWhatsThis(
-			"<p><b>Analysis Tools</b></p><p>Analysis tools</p>"); // TODO: add detail here
+HdfViewer::HdfViewer(void) : DefaultGUIModel("Analysis Tools", ::vars, ::num_vars) {
+	setWhatsThis("<p><b>Analysis Tools</b></p><p>View HDF data recorded by the data recorded. Simply open the file in the File Control Menu and click specific channels in the HDF5 Viewer list. Under 'Plotting Options,' you can change from view from time series to an FFT. To zoom in to the plot, use the mouse to click-and-drag an area. Plots can be saved to PDF (via the Plot button), and data used in the plot (both x and y axis) can be saved to a text file (via the Export button)</p>"); 
 	initParameters();
 	DefaultGUIModel::createGUI(vars, num_vars); // this is required to create the GUI
 	customizeGUI();
