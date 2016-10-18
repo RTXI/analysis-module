@@ -7,7 +7,7 @@ HEADERS = analysis-tools.h
 SOURCES = analysis-tools.cpp\
           moc_analysis-tools.cpp
 
-LIBS = -lqwt -lgsl -lhdf5 -lrtplot -lrtdsp -lrtmath
+LIBS = -lgsl -lhdf5 -lrtplot -lrtdsp
 
 ### Do not edit below this line ###
 
