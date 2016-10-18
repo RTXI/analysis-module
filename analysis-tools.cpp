@@ -224,7 +224,8 @@ void HdfViewer::customizeGUI(void) {
 
 	// HDF5 viewer
 	treeViewer = new QTreeWidget;
-	treeViewer->setHeaderLabels(QStringList("HDF5 Viewer"));
+	treeViewer->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	treeViewer->setHeaderLabels(QStringList("HDF Tree"));
 	QObject::connect(treeViewer, SIGNAL(clicked(QModelIndex)), this, SLOT(changeChannel(QModelIndex)));
 	fileColumnLayout->addWidget(treeViewer);
 
@@ -482,7 +483,7 @@ void HdfViewer::getTrialData() {
 	
 	// Check if selected channel is actually a channel (should have 0 children in
 	// the treeViewer)
-	if (treeViewer->currentItem()->childCount() != 0) {
+	if (treeViewer->currentItem()->childCount() != 0 || treeViewer->currentItem()->text(0) == "Asynchronous Data" || treeViewer->currentItem()->text(0) == "Synchronous Data") {
 		printf("getTrialData error: selected channel is not a dataset\n");
 		return;
 	}
