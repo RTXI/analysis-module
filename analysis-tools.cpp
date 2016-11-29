@@ -493,7 +493,7 @@ void HdfViewer::getTrialData() {
 
 	// Get elements from GUI
 	QString selectedTrial = treeViewer->currentItem()->text(0);
-	QString channelNum = selectedTrial.at(0);
+	QString channelNum = selectedTrial.split(" ").at(0);
 	int channelNumInt = channelNum.toInt();
 	QString trialToRead = treeViewer->currentItem()->parent()->parent()->text(0) + "/" +
 			treeViewer->currentItem()->parent()->text(0);
