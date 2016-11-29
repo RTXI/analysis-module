@@ -1,7 +1,5 @@
 PLUGIN_NAME = analysis_tools
 
-RTXI_INCLUDES=
-
 HEADERS = analysis-tools.h
 
 SOURCES = analysis-tools.cpp\
