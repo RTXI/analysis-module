@@ -128,7 +128,7 @@ private:
   std::vector<double> data_buffer;
   std::vector<double> channel_data;
   std::vector<double> time_buffer;
-  std::vector<double> period_buffer;
+  double data_period;
   std::vector<double> fft_output_y;
   std::vector<double> fft_output_x;
   std::vector<complex> fft_input;

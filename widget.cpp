@@ -68,7 +68,7 @@ void analysis_module::Panel::initParameters()
   data_buffer.clear();
   channel_data.clear();
   time_buffer.clear();
-  period_buffer.clear();
+  data_period=RT::OS::DEFAULT_PERIOD;
   fft_output_y.clear();
   fft_output_x.clear();
   fft_input.clear();
@@ -462,26 +462,28 @@ void analysis_module::Panel::getTrialData()
   // Open packet table
   packettable_id = H5PTopen(file_id, channelToRead.toLatin1().constData());
   if (packettable_id < 0) {
-    printf("Throw error - H5PTopen error %ld\n", packettable_id);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTopen error {}", packettable_id);
+    return;
   }
 
   // Get packet count
   status = H5PTget_num_packets(packettable_id, &nrecords);
   if (status < 0) {
-    printf("Throw error - H5PTget_num_packets error %d\n", status);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTget_num_packets error {}", status);
+    return;
   }
 
   // Get number of trials
   status = H5Gget_num_objs(file_id, &ntrials);
   if (status < 0) {
-    printf("Throw error - H5Gget_num_objs %d\n", status);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTget_num_objs error {}", status);
+    return;
   }
 
-  // Get identifier for trial and group
-  printf("%s\n", trialToRead.toStdString().c_str());
   trial_id = H5Gopen1(file_id, trialToRead.toLatin1().constData());
   if (trial_id < 0) {
-    printf("Throw error - H5Gopen1 %ld\n", trial_id);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5Gopen1 error {}", trial_id);
+    return;
   }
 
   // Get number of channels from trial
@@ -493,14 +495,10 @@ void analysis_module::Panel::getTrialData()
   nchannels--;
 
   // Initialize data buffer -- module will crash for large trials...
-  data_buffer =
-      static_cast<double*>(malloc(sizeof(double) * static_cast<int>(nrecords)
-                                  * static_cast<int>(nchannels)));
-  channel_data =
-      static_cast<double*>(malloc(sizeof(double) * static_cast<int>(nrecords)));
-  time_buffer =
-      static_cast<double*>(malloc(sizeof(double) * static_cast<int>(nrecords)));
-  period_buffer = static_cast<double*>(malloc(sizeof(double)));
+  data_buffer.reserve(nrecords + nchannels);
+  channel_data.reserve(nrecords);
+  time_buffer.reserve(nrecords);
+  data_period;
 
   // Read data
   status = H5PTread_packets(

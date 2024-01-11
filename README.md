@@ -7,7 +7,7 @@
 
 <!--start-->
 
-<p><b>Analysis Tools</b></p><p>View HDF data recorded by the data recorded.
+<p><b>Analysis Tools</b></p><p>View HDF data recorded by the data recorder.
 Simply open the file in the File Control Menu and click specific channels in
 the HDF5 Viewer list. Under 'Plotting Options,' you can change from view from
 time series to an FFT. To zoom in to the plot, use the mouse to click-and-drag
