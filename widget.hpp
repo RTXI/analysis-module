@@ -16,24 +16,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QSpinBox>
 #include <QTreeWidget>
-#include <rtxi/widgets.hpp>
-#include <rtxi/dsp/gen_win.h>
-#include <rtxi/dsp/rectnglr.h>
-#include <rtxi/dsp/trianglr.h>
-#include <rtxi/dsp/hamming.h>
-#include <rtxi/dsp/hann.h>
-#include <rtxi/dsp/dolph.h>
-#include <rtxi/dsp/kaiser.h>
-#include <rtxi/dsp/fft.h>
 
-#include <rtxi/plot/basicplot.h>
-#include <qwt_plot_curve.h>
 #include <hdf5.h>
 #include <hdf5_hl.h>
-#include <QComboBox>
-
+#include <qwt_plot_curve.h>
+#include <rtxi/dsp/dolph.h>
+#include <rtxi/dsp/fft.h>
+#include <rtxi/dsp/gen_win.h>
+#include <rtxi/dsp/hamming.h>
+#include <rtxi/dsp/hann.h>
+#include <rtxi/dsp/kaiser.h>
+#include <rtxi/dsp/rectnglr.h>
+#include <rtxi/dsp/trianglr.h>
+#include <rtxi/plot/basicplot.h>
+#include <rtxi/widgets.hpp>
 
 // This is an generated header file. You may change the namespace, but
 // make sure to do the same in implementation (.cpp) file
@@ -52,7 +51,7 @@ inline std::vector<IO::channel_t> get_default_channels()
   return {};
 }
 
-herr_t op_func(hid_t, const char*, const H5O_info_t*, void*);
+herr_t op_func(hid_t loc_id, const char* name, const H5O_info_t* info, void* operator_data);
 
 class Panel : public Widgets::Panel
 {

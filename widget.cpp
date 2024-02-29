@@ -502,7 +502,7 @@ void analysis_module::Panel::getTrialData()
 
   // Read data
   status = H5PTread_packets(
-      packettable_id, 0, static_cast<int>(nrecords), data_buffer);
+      packettable_id, 0, static_cast<int>(nrecords), data_buffer.data());
   if (status < 0) {
     printf("Throw error - H5PTread_packets error %d\n", status);
   }
@@ -543,13 +543,13 @@ void analysis_module::Panel::getTrialData()
                    H5S_ALL,
                    H5S_ALL,
                    H5P_DEFAULT,
-                   period_buffer);
+                   &data_period);
   if (status < 0) {
     printf("Throw error - H5Dread error %d\n", status);
   }
   time_buffer[0] = 0;
   for (int i = 1; i < static_cast<int>(nrecords); i++) {
-    time_buffer[i] = time_buffer[i - 1] + (*period_buffer / 1e9);
+    time_buffer[i] = time_buffer[i - 1] + (data_period / 1e9);
   }
 
   // FFT plot
@@ -559,10 +559,10 @@ void analysis_module::Panel::getTrialData()
   while (fft_length < (int)nrecords) {
     fft_length = fft_length * 2;
   }
-  fft_input = static_cast<complex*>(malloc(sizeof(complex) * fft_length));
-  fft_buffer = static_cast<complex*>(malloc(sizeof(complex) * fft_length));
-  fft_output_y = static_cast<double*>(malloc(sizeof(double) * fft_length));
-  fft_output_x = static_cast<double*>(malloc(sizeof(double) * fft_length));
+  fft_input.reserve(fft_length);
+  fft_buffer.reserve(fft_length);
+  fft_output_y.reserve(fft_length);
+  fft_output_x.reserve(fft_length);
   makeWindow(static_cast<int>(nrecords));
   for (int i = 0; i < fft_length; i++) {
     if (i < static_cast<int>(nrecords)) {
@@ -572,10 +572,10 @@ void analysis_module::Panel::getTrialData()
       fft_input[i] = 0;  // pad the rest of the array with 0's
     }
   }
-  fft(fft_input, fft_buffer, fft_length);
+  fft(fft_input.data(), fft_buffer.data(), fft_length);
   for (int i = 0; i < fft_length; i++) {
     fft_output_y[i] = fabs(real(fft_buffer[i]));
-    fft_output_x[i] = i / ((*period_buffer / 1e9) * fft_length);
+    fft_output_x[i] = i / ((data_period / 1e9) * fft_length);
   }
 
   // Full wave rectification
@@ -587,8 +587,8 @@ void analysis_module::Panel::getTrialData()
   }
 
   // Plot
-  tscurve->setRawSamples(time_buffer, channel_data, static_cast<int>(nrecords));
-  fftcurve->setRawSamples(fft_output_x, fft_output_y, fft_length);
+  tscurve->setRawSamples(time_buffer.data(), channel_data.data(), static_cast<int>(nrecords));
+  fftcurve->setRawSamples(fft_output_x.data(), fft_output_y.data(), fft_length);
   updatePlot();
 
   // Close identifiers
@@ -647,31 +647,31 @@ herr_t analysis_module::op_func(hid_t loc_id,
                                 const H5O_info_t* info,
                                 void* operator_data)
 {
+  QTreeWidget* tree = reinterpret_cast<QTreeWidget*>(operator_data);
+  QTreeWidgetItem* tree_item = nullptr;
+  QTreeWidgetItem* parent_item = nullptr;
   QString qName = QString(name);
   if (name[0] == '.') {
   } else {
     switch (info->type) {
       case H5O_TYPE_GROUP:
-        // printf ("%s  (Group)\n", name);
-        if (!qName.startsWith(currentTrial) || currentTrial == "") {
-          currentTrial = qName;
-          treeParent = new QTreeWidgetItem;
-          treeParent->setText(0, qName);
-          treeViewer->addTopLevelItem(treeParent);
-        } else if (qName.startsWith(currentTrial)
-                   && qName.endsWith("Asynchronous Data"))
+        if (!qName.startsWith("Trial")) {
+          tree_item = new QTreeWidgetItem;
+          tree_item->setText(0, qName);
+          tree->addTopLevelItem(tree_item);
+        } else if (qName.endsWith("Asynchronous Data"))
         {
-          treeChild1 = new QTreeWidgetItem;
-          currentGroup = "Asynchronous Data";
-          treeChild1->setText(0, "Asynchronous Data");
-          treeParent->addChild(treeChild1);
-        } else if (qName.startsWith(currentTrial)
-                   && qName.endsWith("Synchronous Data"))
+          tree_item = new QTreeWidgetItem;
+          // We need to get the trial group name which is somewhat stored in the name already
+          parent_item = tree->findItems(qName.split("/", Qt::SkipEmptyParts)[0], Qt::MatchExactly)[0];
+          tree_item->setText(0, "Asynchronous Data");
+          parent_item->addChild(tree_item);
+        } else if (qName.endsWith("Synchronous Data"))
         {
-          treeChild1 = new QTreeWidgetItem;
-          currentGroup = "Synchronous Data";
-          treeChild1->setText(0, "Synchronous Data");
-          treeParent->addChild(treeChild1);
+          tree_item = new QTreeWidgetItem;
+          parent_item = tree->findItems(qName.split("/", Qt::SkipEmptyParts)[0], Qt::MatchExactly)[0];
+          tree_item->setText(0, "Synchronous Data");
+          parent_item->addChild(tree_item);
         }
         break;
       case H5O_TYPE_DATASET:
