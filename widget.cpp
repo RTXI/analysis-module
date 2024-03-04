@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "widget.hpp"
 
+#include <qnamespace.h>
+
 analysis_module::Plugin::Plugin(Event::Manager* ev_manager)
     : Widgets::Plugin(ev_manager, std::string(analysis_module::MODULE_NAME))
 {
@@ -68,7 +70,7 @@ void analysis_module::Panel::initParameters()
   data_buffer.clear();
   channel_data.clear();
   time_buffer.clear();
-  data_period=RT::OS::DEFAULT_PERIOD;
+  data_period = RT::OS::DEFAULT_PERIOD;
   fft_output_y.clear();
   fft_output_x.clear();
   fft_input.clear();
@@ -462,27 +464,33 @@ void analysis_module::Panel::getTrialData()
   // Open packet table
   packettable_id = H5PTopen(file_id, channelToRead.toLatin1().constData());
   if (packettable_id < 0) {
-    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTopen error {}", packettable_id);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTopen error {}",
+              packettable_id);
     return;
   }
 
   // Get packet count
   status = H5PTget_num_packets(packettable_id, &nrecords);
   if (status < 0) {
-    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTget_num_packets error {}", status);
+    ERROR_MSG(
+        "analysis_module::Panel::getTrialData : H5PTget_num_packets error {}",
+        status);
     return;
   }
 
   // Get number of trials
   status = H5Gget_num_objs(file_id, &ntrials);
   if (status < 0) {
-    ERROR_MSG("analysis_module::Panel::getTrialData : H5PTget_num_objs error {}", status);
+    ERROR_MSG(
+        "analysis_module::Panel::getTrialData : H5PTget_num_objs error {}",
+        status);
     return;
   }
 
   trial_id = H5Gopen1(file_id, trialToRead.toLatin1().constData());
   if (trial_id < 0) {
-    ERROR_MSG("analysis_module::Panel::getTrialData : H5Gopen1 error {}", trial_id);
+    ERROR_MSG("analysis_module::Panel::getTrialData : H5Gopen1 error {}",
+              trial_id);
     return;
   }
 
@@ -587,7 +595,8 @@ void analysis_module::Panel::getTrialData()
   }
 
   // Plot
-  tscurve->setRawSamples(time_buffer.data(), channel_data.data(), static_cast<int>(nrecords));
+  tscurve->setRawSamples(
+      time_buffer.data(), channel_data.data(), static_cast<int>(nrecords));
   fftcurve->setRawSamples(fft_output_x.data(), fft_output_y.data(), fft_length);
   updatePlot();
 
@@ -647,70 +656,39 @@ herr_t analysis_module::op_func(hid_t loc_id,
                                 const H5O_info_t* info,
                                 void* operator_data)
 {
-  QTreeWidget* tree = reinterpret_cast<QTreeWidget*>(operator_data);
+  auto* tree = reinterpret_cast<QTreeWidget*>(operator_data);
   QTreeWidgetItem* tree_item = nullptr;
   QTreeWidgetItem* parent_item = nullptr;
   QString qName = QString(name);
-  if (name[0] == '.') {
-  } else {
-    switch (info->type) {
-      case H5O_TYPE_GROUP:
-        if (!qName.startsWith("Trial")) {
-          tree_item = new QTreeWidgetItem;
-          tree_item->setText(0, qName);
-          tree->addTopLevelItem(tree_item);
-        } else if (qName.endsWith("Asynchronous Data"))
-        {
-          tree_item = new QTreeWidgetItem;
-          // We need to get the trial group name which is somewhat stored in the name already
-          parent_item = tree->findItems(qName.split("/", Qt::SkipEmptyParts)[0], Qt::MatchExactly)[0];
-          tree_item->setText(0, "Asynchronous Data");
-          parent_item->addChild(tree_item);
-        } else if (qName.endsWith("Synchronous Data"))
-        {
-          tree_item = new QTreeWidgetItem;
-          parent_item = tree->findItems(qName.split("/", Qt::SkipEmptyParts)[0], Qt::MatchExactly)[0];
-          tree_item->setText(0, "Synchronous Data");
-          parent_item->addChild(tree_item);
-        }
-        break;
-      case H5O_TYPE_DATASET:
-        // printf ("%s  (Dataset)\n", name);
-        if (qName.startsWith(currentTrial + "/Asynchronous Data")
-            && !qName.endsWith("Channel Data"))
-        {
-          treeChild2 = new QTreeWidgetItem;
-          treeChild2->setText(0,
-                              qName.right(qName.length()
-                                          - (currentTrial.length()
-                                             + currentGroup.length() + 2)));
-          treeChild1->addChild(treeChild2);
-          treeChild2->setToolTip(0, qName);
-          if (firstChannelSelected == 0) {
-            firstChannelSelected = 1;
-            treeViewer->setCurrentItem(treeChild2);
-          }
-        } else if (qName.startsWith(currentTrial + "/Synchronous Data")
-                   && !qName.endsWith("Channel Data"))
-        {
-          treeChild2 = new QTreeWidgetItem;
-          treeChild2->setText(0,
-                              qName.right(qName.length()
-                                          - (currentTrial.length()
-                                             + currentGroup.length() + 2)));
-          treeChild1->addChild(treeChild2);
-          treeChild2->setToolTip(0, qName);
-          if (firstChannelSelected == 0) {
-            firstChannelSelected = 1;
-            treeViewer->setCurrentItem(treeChild2);
-          }
-        }
-        // else statement -- add all remaining dataset contents to parameters
-        break;
-      case H5O_TYPE_NAMED_DATATYPE:
-      default:
-        break;
-    }
+  QStringList split_path = qName.split("/", Qt::SkipEmptyParts);
+  switch (info->type) {
+    case H5O_TYPE_GROUP:
+      tree_item = new QTreeWidgetItem;
+      tree_item->setText(0, split_path.back());
+      if (split_path.size() == 1) {
+        tree->addTopLevelItem(tree_item);
+      } else {
+        split_path.pop_back();
+        QList<QTreeWidgetItem*> matching_groups =
+            tree->findItems(split_path.back(), Qt::MatchExactly);
+        matching_groups[0]->addChild(tree_item);
+      }
+      break;
+    case H5O_TYPE_DATASET:
+      tree_item = new QTreeWidgetItem;
+      tree_item->setText(0, split_path.back());
+      if (split_path.size() == 1) {
+        tree->addTopLevelItem(tree_item);
+      } else {
+        split_path.pop_back();
+        QList<QTreeWidgetItem*> matching_groups =
+            tree->findItems(split_path.back(), Qt::MatchExactly);
+        matching_groups[0]->addChild(tree_item);
+      }
+      break;
+    case H5O_TYPE_NAMED_DATATYPE:
+    default:
+      break;
   }
 
   return 0;
