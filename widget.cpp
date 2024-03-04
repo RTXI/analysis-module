@@ -70,7 +70,6 @@ void analysis_module::Panel::initParameters()
   data_buffer.clear();
   channel_data.clear();
   time_buffer.clear();
-  data_period = RT::OS::DEFAULT_PERIOD;
   fft_output_y.clear();
   fft_output_x.clear();
   fft_input.clear();
@@ -396,7 +395,8 @@ int analysis_module::Panel::openFile(QString& filename)
     file_id =
         H5Fopen(filename.toLatin1().constData(), H5F_ACC_RDONLY, H5P_DEFAULT);
     // Iterate through file
-    status = H5Ovisit(file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, nullptr);
+    status = H5Ovisit(
+        file_id, H5_INDEX_NAME, H5_ITER_NATIVE, op_func, this->treeViewer);
     if (status == 0) {
       plotControls->setEnabled(true);
       plotOptions->setEnabled(true);
@@ -419,50 +419,25 @@ void analysis_module::Panel::closeFile()
   }
 }
 
-// TODO: think through error cases here (e.g. when one of the top-level groups
-// are selected, etc.)
 void analysis_module::Panel::getTrialData()
 {
-  // TODO: check that current item is a dataset (and not a group), only
-  // open/plot if a dataset is selected (maybe display an warning otherwise?)
+  QTreeWidgetItem* current_tree_item = this->treeViewer->currentItem();
+  if (current_tree_item == nullptr) {
+    return;
+  }
+  QVariant data_id_variant = current_tree_item->data(0, Qt::UserRole);
+  if (!data_id_variant.isValid()) {
+    return;
+  }
   herr_t status = 0;
   hsize_t nrecords = 0;
-  hsize_t ntrials = 0;
-  hsize_t nchannels = 0;
   hid_t packettable_id = 0;
-  hid_t trial_id = 0;
-  hid_t period_id = 0;
   double channelDataSum = 0;
   double channelDataMean = NAN;
 
-  // Check if selected channel is actually a channel (should have 0 children in
-  // the treeViewer)
-  if (treeViewer->currentItem()->childCount() != 0
-      || treeViewer->currentItem()->text(0) == "Asynchronous Data"
-      || treeViewer->currentItem()->text(0) == "Synchronous Data")
-  {
-    printf("getTrialData error: selected channel is not a dataset\n");
-    return;
-  }
-
-  // Reset data buffers if something is already plotted
-
-  // Get elements from GUI
-  QString selectedTrial = treeViewer->currentItem()->text(0);
-  QString channelNum = selectedTrial.split(" ").at(0);
-  int channelNumInt = channelNum.toInt();
-  QString trialToRead = treeViewer->currentItem()->parent()->parent()->text(0)
-      + "/" + treeViewer->currentItem()->parent()->text(0);
-  QString channelToRead = treeViewer->currentItem()->parent()->parent()->text(0)
-      + "/" + treeViewer->currentItem()->parent()->text(0) + "/Channel Data";
-  QString periodToRead =
-      treeViewer->currentItem()->parent()->parent()->text(0) + "/Period (ns)";
-  QString trialLengthToRead =
-      treeViewer->currentItem()->parent()->parent()->text(0)
-      + "/Trial Length (ns)";
-
   // Open packet table
-  packettable_id = H5PTopen(file_id, channelToRead.toLatin1().constData());
+  packettable_id =
+      H5PTopen(file_id, data_id_variant.value<QString>().toLatin1());
   if (packettable_id < 0) {
     ERROR_MSG("analysis_module::Panel::getTrialData : H5PTopen error {}",
               packettable_id);
@@ -477,36 +452,14 @@ void analysis_module::Panel::getTrialData()
         status);
     return;
   }
-
-  // Get number of trials
-  status = H5Gget_num_objs(file_id, &ntrials);
-  if (status < 0) {
-    ERROR_MSG(
-        "analysis_module::Panel::getTrialData : H5PTget_num_objs error {}",
-        status);
+  if (nrecords <= 1) {
     return;
   }
-
-  trial_id = H5Gopen1(file_id, trialToRead.toLatin1().constData());
-  if (trial_id < 0) {
-    ERROR_MSG("analysis_module::Panel::getTrialData : H5Gopen1 error {}",
-              trial_id);
-    return;
-  }
-
-  // Get number of channels from trial
-  // Returned number of objects includes "Channel Data" struct, so we subtract 1
-  status = H5Gget_num_objs(trial_id, &nchannels);
-  if (status < 0) {
-    printf("Throw error - H5Gget_num_objs %d\n", status);
-  }
-  nchannels--;
 
   // Initialize data buffer -- module will crash for large trials...
-  data_buffer.reserve(nrecords + nchannels);
-  channel_data.reserve(nrecords);
-  time_buffer.reserve(nrecords);
-  data_period;
+  data_buffer.resize(nrecords);
+  channel_data.resize(nrecords);
+  time_buffer.resize(nrecords);
 
   // Read data
   status = H5PTread_packets(
@@ -515,65 +468,33 @@ void analysis_module::Panel::getTrialData()
     printf("Throw error - H5PTread_packets error %d\n", status);
   }
 
-  // Build channel_data array -- pretty messy but seems unavoidable with the
-  // current Data Recorder structure. To eliminate a loop later on, find
-  // channelDataSum here if full wave rectification option is checked
-  if (fwrChecked) {
-    int j = 0;
-    for (int i = channelNumInt - 1;
-         i < static_cast<int>(nrecords) * static_cast<int>(nchannels);
-         i = i + static_cast<int>(nchannels))
-    {
-      channel_data[j] = data_buffer[i];
-      channelDataSum = channelDataSum + channel_data[j];
-      j++;
-    }
-    // find DC offset -- for long signals, it's approx. the mean
-    channelDataMean = channelDataSum / ((int)nrecords);
-  } else {
-    int j = 0;
-    for (int i = channelNumInt - 1; i < (int)nrecords * (int)nchannels;
-         i = i + nchannels)
-    {
-      channel_data[j] = data_buffer[i];
-      j++;
-    }
+  for (int i = 0; i < nrecords; i++) {
+    channel_data[i] = data_buffer[i].value;
+    channelDataSum = channelDataSum + channel_data[i];
   }
+  // find DC offset -- for long signals, it's approx. the mean
+  channelDataMean = channelDataSum / (static_cast<double>(nrecords));
 
+  const auto start_time = static_cast<double>(data_buffer[0].time);
   // Build time vector
-  period_id =
-      H5Dopen2(file_id, periodToRead.toLatin1().constData(), H5P_DEFAULT);
-  if (period_id < 0) {
-    printf("Throw error - H5Dopen2 error %ld\n", period_id);
-  }
-  status = H5Dread(period_id,
-                   H5T_NATIVE_DOUBLE,
-                   H5S_ALL,
-                   H5S_ALL,
-                   H5P_DEFAULT,
-                   &data_period);
-  if (status < 0) {
-    printf("Throw error - H5Dread error %d\n", status);
-  }
-  time_buffer[0] = 0;
-  for (int i = 1; i < static_cast<int>(nrecords); i++) {
-    time_buffer[i] = time_buffer[i - 1] + (data_period / 1e9);
+  for (int i = 1; i < nrecords; i++) {
+    time_buffer[i] = static_cast<double>(data_buffer[i].time) - start_time;
   }
 
   // FFT plot
   // TODO: check if FFT plot is selected
   double windowedChannelVal = NAN;
   int fft_length = 2;
-  while (fft_length < (int)nrecords) {
+  while (fft_length < nrecords) {
     fft_length = fft_length * 2;
   }
-  fft_input.reserve(fft_length);
-  fft_buffer.reserve(fft_length);
-  fft_output_y.reserve(fft_length);
-  fft_output_x.reserve(fft_length);
+  fft_input.resize(fft_length);
+  fft_buffer.resize(fft_length);
+  fft_output_y.resize(fft_length);
+  fft_output_x.resize(fft_length);
   makeWindow(static_cast<int>(nrecords));
   for (int i = 0; i < fft_length; i++) {
-    if (i < static_cast<int>(nrecords)) {
+    if (i < nrecords) {
       windowedChannelVal = disc_window->GetDataWinCoeff(i) * channel_data[i];
       fft_input[i] = complex(windowedChannelVal, 0.0);
     } else {
@@ -581,9 +502,13 @@ void analysis_module::Panel::getTrialData()
     }
   }
   fft(fft_input.data(), fft_buffer.data(), fft_length);
-  for (int i = 0; i < fft_length; i++) {
+  // We have to use a consistent period so we'll just use the average. This will give
+  // really wrong answers if too many data points are skipped or lost
+  const double avg_period = (time_buffer.back() - time_buffer.front())
+      / static_cast<double>(time_buffer.size());
+  for (size_t i = 0; i < fft_length; i++) {
     fft_output_y[i] = fabs(real(fft_buffer[i]));
-    fft_output_x[i] = i / ((data_period / 1e9) * fft_length);
+    fft_output_x[i] = static_cast<double>(i) / ((avg_period/1e9) * fft_length);
   }
 
   // Full wave rectification
@@ -602,8 +527,6 @@ void analysis_module::Panel::getTrialData()
 
   // Close identifiers
   H5PTclose(packettable_id);
-  H5Gclose(trial_id);
-  H5Dclose(period_id);
 }
 
 // Temporary function for validating data access
@@ -650,7 +573,6 @@ void analysis_module::Panel::dump_vals(double* data, hsize_t* /*ndims*/)
   }
 }
 
-// TODO: clean up treeViewer -- no need to list full path for each parent/child
 herr_t analysis_module::op_func(hid_t loc_id,
                                 const char* name,
                                 const H5O_info_t* info,
@@ -659,7 +581,8 @@ herr_t analysis_module::op_func(hid_t loc_id,
   auto* tree = reinterpret_cast<QTreeWidget*>(operator_data);
   QTreeWidgetItem* tree_item = nullptr;
   QTreeWidgetItem* parent_item = nullptr;
-  QString qName = QString(name);
+  QList<QTreeWidgetItem*> matching_groups;
+  const QString qName = QString(name);
   QStringList split_path = qName.split("/", Qt::SkipEmptyParts);
   switch (info->type) {
     case H5O_TYPE_GROUP:
@@ -669,30 +592,25 @@ herr_t analysis_module::op_func(hid_t loc_id,
         tree->addTopLevelItem(tree_item);
       } else {
         split_path.pop_back();
-        QList<QTreeWidgetItem*> matching_groups =
-            tree->findItems(split_path.back(), Qt::MatchExactly);
+        matching_groups = tree->findItems(split_path.back(), Qt::MatchExactly);
         matching_groups[0]->addChild(tree_item);
       }
       break;
     case H5O_TYPE_DATASET:
       tree_item = new QTreeWidgetItem;
       tree_item->setText(0, split_path.back());
-      if (split_path.size() == 1) {
-        tree->addTopLevelItem(tree_item);
-      } else {
-        split_path.pop_back();
-        QList<QTreeWidgetItem*> matching_groups =
-            tree->findItems(split_path.back(), Qt::MatchExactly);
-        matching_groups[0]->addChild(tree_item);
-      }
+      tree_item->setData(0, Qt::UserRole, QVariant::fromValue<QString>(qName));
+      split_path.pop_back();
+      matching_groups = tree->findItems(split_path.back(),
+                                        Qt::MatchExactly | Qt::MatchRecursive);
+      matching_groups.back()->addChild(tree_item);
       break;
-    case H5O_TYPE_NAMED_DATATYPE:
     default:
       break;
   }
-
   return 0;
 }
+
 ///////// DO NOT MODIFY BELOW //////////
 // The exception is if your plugin is not going to need real-time functionality.
 // For this case just replace the craeteRTXIComponent return type to nullptr.

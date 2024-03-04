@@ -41,6 +41,12 @@ namespace analysis_module
 
 constexpr std::string_view MODULE_NAME = "analysis-module";
 
+// This format is taken from data recorder header file. 
+typedef struct data_sample {
+  int64_t time;
+  double value;
+} data_sample;
+
 inline std::vector<Widgets::Variable::Info> get_default_vars()
 {
   return {};
@@ -119,15 +125,12 @@ private:
   // Tree traversal variables for hdf5 datasets
   QTreeWidget* treeViewer;
   QTreeWidgetItem* treeParent;
-  QTreeWidgetItem* treeChild1;
-  QTreeWidgetItem* treeChild2;
   QString currentTrial, currentGroup;
   int currentTrialFlag;
   int firstChannelSelected;
-  std::vector<double> data_buffer;
+  std::vector<data_sample> data_buffer;
   std::vector<double> channel_data;
   std::vector<double> time_buffer;
-  double data_period;
   std::vector<double> fft_output_y;
   std::vector<double> fft_output_x;
   std::vector<complex> fft_input;
