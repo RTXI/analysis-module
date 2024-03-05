@@ -387,9 +387,6 @@ void analysis_module::Panel::changeDataFile()
 int analysis_module::Panel::openFile(QString& filename)
 {
   herr_t status = -1;
-  currentTrialFlag = 0;
-  currentTrial = "";
-  firstChannelSelected = 0;
 
   if (QFile::exists(filename)) {
     file_id =
@@ -564,15 +561,6 @@ void analysis_module::Panel::updatePlotMode(int mode)
   updatePlot();
 }
 
-// Temporary function for validating data access
-void analysis_module::Panel::dump_vals(double* data, hsize_t* /*ndims*/)
-{
-  // Only printing first value out or else the printf will block
-  for (size_t i = 0; i < 10; i++) {
-    printf("value is %f\n", data[i]);
-  }
-}
-
 herr_t analysis_module::op_func(hid_t loc_id,
                                 const char* name,
                                 const H5O_info_t* info,
@@ -629,7 +617,7 @@ Widgets::Panel* createRTXIPanel(QMainWindow* main_window,
 }
 
 std::unique_ptr<Widgets::Component> createRTXIComponent(
-    Widgets::Plugin* host_plugin)
+    Widgets::Plugin*  /*host_plugin*/)
 {
   return nullptr;
 }

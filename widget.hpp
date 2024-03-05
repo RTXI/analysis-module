@@ -41,8 +41,9 @@ namespace analysis_module
 
 constexpr std::string_view MODULE_NAME = "analysis-module";
 
-// This format is taken from data recorder header file. 
-typedef struct data_sample {
+// This format is taken from data recorder header file.
+typedef struct data_sample
+{
   int64_t time;
   double value;
 } data_sample;
@@ -57,7 +58,10 @@ inline std::vector<IO::channel_t> get_default_channels()
   return {};
 }
 
-herr_t op_func(hid_t loc_id, const char* name, const H5O_info_t* info, void* operator_data);
+herr_t op_func(hid_t loc_id,
+               const char* name,
+               const H5O_info_t* info,
+               void* operator_data);
 
 class Panel : public Widgets::Panel
 {
@@ -90,8 +94,8 @@ public:
 
 private:
   // inputs, states, flags, calculated values
-  bool fwrChecked;
-  GenericWindow* disc_window;
+  bool fwrChecked=false;
+  GenericWindow* disc_window=nullptr;
   plot_t plot_mode;
   window_t window_shape;
   double Kalpha;  // Kaiser window sidelobe attenuation parameter
@@ -102,32 +106,34 @@ private:
   hid_t dataset_id;
 
   // GUI components
-  BasicPlot* omniplot;
-  QwtPlotCurve *tscurve, *fftcurve;
+  BasicPlot* omniplot = nullptr;
+  QwtPlotCurve* tscurve = nullptr;
+  QwtPlotCurve* fftcurve = nullptr;
   double xmin, xmax, ymin, ymax;
   // QwtText xAxisTitle, yAxisTitle;
 
-  QGroupBox *plotControls, *plotOptions;
-  QLineEdit* fileNameEdit;
-  QPushButton *resetPlotButton, *savePlotButton, *exportSeriesButton;
-  QComboBox *windowShape, *plotType;
-  QButtonGroup* plotOptionsButtons;
-  QCheckBox* FWRCheckBox;
-  QDoubleSpinBox *kalphaEdit, *calphaEdit;
+  QGroupBox* plotControls = nullptr;
+  QGroupBox* plotOptions = nullptr;
+  QLineEdit* fileNameEdit = nullptr;
+  QPushButton* resetPlotButton = nullptr;
+  QPushButton* savePlotButton = nullptr;
+  QPushButton* exportSeriesButton = nullptr;
+  QComboBox* windowShape = nullptr;
+  QComboBox* plotType = nullptr;
+  QButtonGroup* plotOptionsButtons = nullptr;
+  QCheckBox* FWRCheckBox = nullptr;
+  QDoubleSpinBox* kalphaEdit = nullptr;
+  QDoubleSpinBox* calphaEdit = nullptr;
 
   // custom functions
   void initParameters();
   int openFile(QString& filename);
   void closeFile();
-  void dump_vals(double*, hsize_t*);
   void makeWindow(int);
 
   // Tree traversal variables for hdf5 datasets
-  QTreeWidget* treeViewer;
-  QTreeWidgetItem* treeParent;
-  QString currentTrial, currentGroup;
-  int currentTrialFlag;
-  int firstChannelSelected;
+  QTreeWidget* treeViewer = nullptr;
+  QTreeWidgetItem* treeParent = nullptr;
   std::vector<data_sample> data_buffer;
   std::vector<double> channel_data;
   std::vector<double> time_buffer;
