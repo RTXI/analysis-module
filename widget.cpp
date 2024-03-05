@@ -78,7 +78,7 @@ void analysis_module::Panel::initParameters()
 
 void analysis_module::Panel::customizeGUI()
 {
-  auto* customlayout = new QVBoxLayout(this);
+  auto* customlayout = new QHBoxLayout(this);
 
   // File control
   auto* fileColumnLayout = new QVBoxLayout;
@@ -96,7 +96,6 @@ void analysis_module::Panel::customizeGUI()
 
   // Plot controls
   auto* plotColumnLayout = new QVBoxLayout;
-  customlayout->addLayout(plotColumnLayout);
   plotControls = new QGroupBox("Plot Controls");
   auto* plotControlsLayout = new QHBoxLayout;
   plotControls->setLayout(plotControlsLayout);
@@ -210,6 +209,7 @@ void analysis_module::Panel::customizeGUI()
   fileColumnLayout->addWidget(treeViewer);
 
   customlayout->addLayout(fileColumnLayout);
+  customlayout->addLayout(plotColumnLayout);
 
   setLayout(customlayout);
   QObject::connect(this,
