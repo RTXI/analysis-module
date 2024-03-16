@@ -5,7 +5,7 @@ project(
     VERSION 0.1.0
     DESCRIPTION "View hdf5 data recorded by the Data Recorder plugin"
     HOMEPAGE_URL "https://rtxi.org/"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 # These lines help with third-party tooling integration
