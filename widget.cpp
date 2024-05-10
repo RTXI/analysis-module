@@ -571,7 +571,7 @@ herr_t analysis_module::op_func(hid_t loc_id,
   QTreeWidgetItem* parent_item = nullptr;
   QList<QTreeWidgetItem*> matching_groups;
   const QString qName = QString(name);
-  QStringList split_path = qName.split("/", Qt::SkipEmptyParts);
+  QStringList split_path = qName.split("/");
   switch (info->type) {
     case H5O_TYPE_GROUP:
       tree_item = new QTreeWidgetItem;
