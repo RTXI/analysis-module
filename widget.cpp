@@ -16,16 +16,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#include <QBoxLayout>
 #include <QButtonGroup>
 #include <QFileDialog>
+#include <QGroupBox>
+#include <QLabel>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSettings>
 #include <QTimer>
 #include <cmath>
 
 #include "widget.hpp"
-
-#include <qnamespace.h>
 
 analysis_module::Plugin::Plugin(Event::Manager* ev_manager)
     : Widgets::Plugin(ev_manager, std::string(analysis_module::MODULE_NAME))
@@ -35,7 +37,7 @@ analysis_module::Plugin::Plugin(Event::Manager* ev_manager)
 analysis_module::Panel::Panel(QMainWindow* main_window,
                               Event::Manager* ev_manager)
     : Widgets::Panel(
-        std::string(analysis_module::MODULE_NAME), main_window, ev_manager)
+          std::string(analysis_module::MODULE_NAME), main_window, ev_manager)
 {
   setWhatsThis(
       "<p><b>Analysis Tools</b></p><p>View HDF data recorded by the data "
@@ -499,13 +501,14 @@ void analysis_module::Panel::getTrialData()
     }
   }
   fft(fft_input.data(), fft_buffer.data(), fft_length);
-  // We have to use a consistent period so we'll just use the average. This will give
-  // really wrong answers if too many data points are skipped or lost
+  // We have to use a consistent period so we'll just use the average. This will
+  // give really wrong answers if too many data points are skipped or lost
   const double avg_period = (time_buffer.back() - time_buffer.front())
       / static_cast<double>(time_buffer.size());
   for (size_t i = 0; i < fft_length; i++) {
     fft_output_y[i] = fabs(real(fft_buffer[i]));
-    fft_output_x[i] = static_cast<double>(i) / ((avg_period/1e9) * fft_length);
+    fft_output_x[i] =
+        static_cast<double>(i) / ((avg_period / 1e9) * fft_length);
   }
 
   // Full wave rectification
@@ -617,7 +620,7 @@ Widgets::Panel* createRTXIPanel(QMainWindow* main_window,
 }
 
 std::unique_ptr<Widgets::Component> createRTXIComponent(
-    Widgets::Plugin*  /*host_plugin*/)
+    Widgets::Plugin* /*host_plugin*/)
 {
   return nullptr;
 }
